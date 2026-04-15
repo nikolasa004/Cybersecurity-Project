@@ -1,4 +1,4 @@
-package rs.ac.uns.ftn.backend;
+package rs.ac.uns.ftn.pki;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

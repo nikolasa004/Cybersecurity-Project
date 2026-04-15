@@ -1,4 +1,4 @@
-package rs.ac.uns.ftn.backend;
+package rs.ac.uns.ftn.pki;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
