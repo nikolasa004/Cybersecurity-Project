@@ -1,0 +1,14 @@
+.shell {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.shell__body {
+  display: flex;
+  min-height: calc(100vh - var(--size-topbar-height));
+}
+
+.shell__content {
+  flex: 1;
+  padding: var(--space-xl);
+}

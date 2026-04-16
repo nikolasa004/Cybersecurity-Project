@@ -1,0 +1,17 @@
+<div class="shell">
+  <app-top-navbar
+    [fullName]="fullName"
+    [roleLabel]="roleLabel"
+    [organization]="organization"
+  />
+
+  <div class="shell__body">
+    <app-sidebar-nav
+      [title]="sidebarTitle"
+      [items]="navItems"
+    />
+    <main class="shell__content">
+      <ng-content />
+    </main>
+  </div>
+</div>

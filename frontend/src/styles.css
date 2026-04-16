@@ -1,1 +1,81 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --color-primary: #1d4ed8;
+  --color-primary-dark: #1e40af;
+  --color-primary-light: #dbeafe;
+
+  --color-bg: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-text-light: #94a3b8;
+
+  --color-border: #d1d5db;
+  --color-border-soft: #e5e7eb;
+  --color-border-dark: #1e293b;
+
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-link: #e2e8f0;
+
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-success: #15803d;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-info-bg: #eff6ff;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+  --radius-round: 999px;
+
+  --font-size-sm: 0.85rem;
+  --font-size-md: 0.9rem;
+  --font-size-lg: 1.1rem;
+  --font-size-xl: 1.8rem;
+  --font-size-2xl: 2rem;
+
+  --space-xs: 0.15rem;
+  --space-sm: 0.8rem;
+  --space-md: 1rem;
+  --space-lg: 1.25rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  --size-topbar-height: 72px;
+  --size-sidebar-width: 270px;
+  --size-avatar: 42px;
+  --size-button-height: 54px;
+  --size-card-max-width: 760px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

@@ -1,0 +1,1 @@
+export type UserRole = 'ADMIN' | 'CA_USER' | 'USER';
