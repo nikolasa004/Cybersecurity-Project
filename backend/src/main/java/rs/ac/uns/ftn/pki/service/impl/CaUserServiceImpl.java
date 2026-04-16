@@ -61,7 +61,7 @@ public class CaUserServiceImpl implements CaUserService {
 
     @Override
     public List<CaUserResponse> getAllCaUsers() {
-        return userRepository.findAllByRoleOrderByIdDesc(UserRole.CA_USER)
+        return userRepository.findAllByRoleWithOrganization(UserRole.CA_USER)
                 .stream()
                 .map(caUserMapper::toResponse)
                 .toList();

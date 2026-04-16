@@ -8,21 +8,19 @@
   <section class="entity-page">
     <div class="entity-page__header">
       <h1>Organizations</h1>
-      <p>
-        Create and manage organizations. CA users are later assigned to one of the registered organizations.
-      </p>
+      <p>Manage organizations available in the PKI system.</p>
     </div>
 
     <div class="entity-page__grid">
       <div class="entity-panel">
         <div class="entity-panel__header">
           <h2>Create organization</h2>
-          <p>Administrator creates a new organization that can later contain CA users and certificates.</p>
+          <p>Enter organization details and save them to the system.</p>
         </div>
 
-        <div class="info-box">
-          This is the initial admin organization management screen.
-        </div>
+        @if (errorMessage) {
+          <div class="form-error" style="margin-bottom: 1rem;">{{ errorMessage }}</div>
+        }
 
         <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()">
           <div class="form-grid">
@@ -100,13 +98,15 @@
 
           <div class="actions">
             <button type="button" class="btn-secondary" (click)="onReset()">Reset</button>
-            <button type="submit" class="btn-primary">Create organization</button>
+            <button type="submit" class="btn-primary" [disabled]="loading">
+              {{ loading ? 'Saving...' : 'Create organization' }}
+            </button>
           </div>
         </form>
 
         @if (createdSuccessfully) {
           <div class="success-box">
-            Organization was added to the mock list successfully.
+            Organization created successfully.
           </div>
         }
       </div>
@@ -114,25 +114,31 @@
       <div class="entity-panel">
         <div class="entity-panel__header">
           <h2>Existing organizations</h2>
-          <p>Preview of organizations currently available for CA user assignment.</p>
+          <p>Organizations currently stored in the system.</p>
         </div>
 
-        <div class="entity-list">
-          @for (organization of organizations; track organization.registrationNumber) {
-            <div class="entity-list__card">
-              <div class="entity-list__top">
-                <h3>{{ organization.name }}</h3>
-                <span class="entity-badge">Organization</span>
+        @if (loadingOrganizations) {
+          <p>Loading organizations...</p>
+        } @else if (organizations.length === 0) {
+          <p>No organizations found.</p>
+        } @else {
+          <div class="entity-list">
+            @for (organization of organizations; track organization.id) {
+              <div class="entity-list__card">
+                <div class="entity-list__top">
+                  <h3>{{ organization.name }}</h3>
+                  <span class="entity-badge">Organization</span>
+                </div>
+
+                <p><strong>Registration number:</strong> {{ organization.registrationNumber }}</p>
+                <p><strong>Address:</strong> {{ organization.address }}</p>
+                <p><strong>City:</strong> {{ organization.city }}</p>
+                <p><strong>Country:</strong> {{ organization.country }}</p>
+                <p><strong>Email domain:</strong> {{ organization.emailDomain }}</p>
               </div>
-
-              <p><strong>Registration number:</strong> {{ organization.registrationNumber }}</p>
-              <p><strong>Address:</strong> {{ organization.address }}</p>
-              <p><strong>City:</strong> {{ organization.city }}</p>
-              <p><strong>Country:</strong> {{ organization.country }}</p>
-              <p><strong>Email domain:</strong> {{ organization.emailDomain }}</p>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
     </div>
   </section>

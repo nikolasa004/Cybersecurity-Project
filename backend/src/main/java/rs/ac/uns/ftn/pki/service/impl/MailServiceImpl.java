@@ -23,7 +23,8 @@ public class MailServiceImpl implements MailService {
     public void sendActivationEmail(String to, String activationLink) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
-        message.setTo(to);
+        //message.setTo(to);
+        message.setTo(from); // For testing purposes, send to self
         message.setSubject("Activate your CA account");
         message.setText("""
                 Your CA account has been created.
@@ -32,6 +33,9 @@ public class MailServiceImpl implements MailService {
                 %s
                 """.formatted(activationLink));
 
+        System.out.println("Sending activation email to: " + to);
+        System.out.println("Activation link: " + activationLink);
+        System.out.println("From: " + from);
         mailSender.send(message);
     }
 }
