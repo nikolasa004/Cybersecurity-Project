@@ -76,6 +76,14 @@ public class CaUserServiceImpl implements CaUserService {
                 user.getActivationTokenExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Activation token has expired.");
         }
+        
+        if (request.getPassword().length() < 15) {
+            throw new BadRequestException("Password must have at least 15 characters.");
+        }
+
+        if (request.getPassword().length() > 64) {
+            throw new BadRequestException("Password must not exceed 64 characters.");
+        }
 
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setActive(true);

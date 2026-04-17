@@ -5,6 +5,7 @@ import { CaDashboardPage } from './pages/ca-dashboard-page/ca-dashboard-page';
 import { UserDashboardPage } from './pages/user-dashboard-page/user-dashboard-page';
 import { OrganizationsPage } from './features/organizations/pages/organizations-page/organizations-page';
 import { CaUsersPage } from './features/ca-users/pages/ca-users-page/ca-users-page';
+import { ActivateAccountPage } from './features/auth/pages/activate-account-page/activate-account-page';
 
 export const routes: Routes = [
   { path: '', component: LandingPage },
@@ -15,6 +16,8 @@ export const routes: Routes = [
 
   { path: 'ca', component: CaDashboardPage },
   { path: 'user', component: UserDashboardPage },
+  
+  { path: 'activate', component: ActivateAccountPage },
 
   { path: '**', redirectTo: '' }
 ];

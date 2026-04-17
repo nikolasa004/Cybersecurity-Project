@@ -33,9 +33,6 @@ public class MailServiceImpl implements MailService {
                 %s
                 """.formatted(activationLink));
 
-        System.out.println("Sending activation email to: " + to);
-        System.out.println("Activation link: " + activationLink);
-        System.out.println("From: " + from);
         mailSender.send(message);
     }
 }
