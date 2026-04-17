@@ -1,0 +1,169 @@
+<app-shell
+  sidebarTitle="Admin panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="issue-page">
+    <div class="issue-page__header">
+      <h1>Issue certificate</h1>
+      <p>Prepare certificate subject data, choose a valid issuer and define certificate usage.</p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="issue-alert issue-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    <div class="issue-panel">
+      <form [formGroup]="issueForm" (ngSubmit)="onSubmit()">
+        <div class="issue-section">
+          <h2>Certificate type</h2>
+
+          <div class="form-grid">
+            <div class="form-group form-group--full">
+              <label for="type">Type</label>
+              <select id="type" formControlName="type">
+                <option value="ROOT">Root</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="END_ENTITY">End-Entity</option>
+              </select>
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="issuerCertificateId">Issuer certificate</label>
+              <select id="issuerCertificateId" formControlName="issuerCertificateId" [disabled]="issueForm.value.type === 'ROOT'">
+                @if (issueForm.value.type === 'ROOT') {
+                  <option value="">Self-signed root certificate</option>
+                } @else {
+                  <option value="">Select issuer</option>
+                  @for (issuer of issuers; track issuer.id) {
+                    <option [value]="issuer.id">{{ issuer.label }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="issue-section">
+          <h2>Subject data</h2>
+
+          <div class="form-grid">
+            <div class="form-group form-group--full">
+              <label for="commonName">Common name (CN)</label>
+              <input id="commonName" type="text" formControlName="commonName" placeholder="Enter common name" />
+              @if (hasError('commonName', 'required')) {
+                <div class="form-error">Common name is required.</div>
+              }
+              @if (hasError('commonName', 'minlength')) {
+                <div class="form-error">Common name must have at least 2 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="country">Country (C)</label>
+              <input id="country" type="text" formControlName="country" placeholder="RS" />
+              @if (hasError('country', 'required')) {
+                <div class="form-error">Country is required.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="state">State / region (ST)</label>
+              <input id="state" type="text" formControlName="state" placeholder="Enter state or region" />
+            </div>
+
+            <div class="form-group">
+              <label for="locality">Locality (L)</label>
+              <input id="locality" type="text" formControlName="locality" placeholder="Enter locality" />
+            </div>
+
+            <div class="form-group">
+              <label for="organization">Organization (O)</label>
+              <input id="organization" type="text" formControlName="organization" placeholder="Enter organization" />
+            </div>
+
+            <div class="form-group">
+              <label for="organizationalUnit">Organizational unit (OU)</label>
+              <input id="organizationalUnit" type="text" formControlName="organizationalUnit" placeholder="Enter organizational unit" />
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input id="email" type="email" formControlName="email" placeholder="Enter email address" />
+              @if (hasError('email', 'email')) {
+                <div class="form-error">Please enter a valid email address.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="subjectSerialNumber">Subject serial number</label>
+              <input id="subjectSerialNumber" type="text" formControlName="subjectSerialNumber" placeholder="Enter subject serial number" />
+            </div>
+          </div>
+        </div>
+
+        <div class="issue-section">
+          <h2>Validity</h2>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="validFrom">Valid from</label>
+              <input id="validFrom" type="datetime-local" formControlName="validFrom" />
+              @if (hasError('validFrom', 'required')) {
+                <div class="form-error">Valid from is required.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="validTo">Valid to</label>
+              <input id="validTo" type="datetime-local" formControlName="validTo" />
+              @if (hasError('validTo', 'required')) {
+                <div class="form-error">Valid to is required.</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="issue-section">
+          <h2>Key usage and capabilities</h2>
+
+          <div class="issue-checkbox-grid">
+            <label class="issue-checkbox">
+              <input type="checkbox" formControlName="ca" />
+              <span>CA certificate</span>
+            </label>
+
+            <label class="issue-checkbox">
+              <input type="checkbox" formControlName="keyCertSign" />
+              <span>Key certificate signing</span>
+            </label>
+
+            <label class="issue-checkbox">
+              <input type="checkbox" formControlName="digitalSignature" />
+              <span>Digital signature</span>
+            </label>
+
+            <label class="issue-checkbox">
+              <input type="checkbox" formControlName="keyEncipherment" />
+              <span>Key encipherment</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="issue-panel__footer">
+          <p>
+            Issuer options are loaded from backend. Certificate submission will be connected when the issuing endpoint is implemented.
+          </p>
+
+          <div class="actions">
+            <button type="submit" class="btn-primary">Issue certificate</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+</app-shell>
