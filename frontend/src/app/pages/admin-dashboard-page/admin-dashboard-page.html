@@ -1,0 +1,33 @@
+<app-shell
+  sidebarTitle="Admin panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="dashboard-page">
+    <div class="dashboard-page__hero">
+      <h1>Welcome, Administrator</h1>
+      <p>
+        You have full access to organizations, CA users, certificate issuance,
+        certificate visibility and revocation management.
+      </p>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h2>Profile overview</h2>
+        <p><strong>Name:</strong> {{ profile.fullName }}</p>
+        <p><strong>Role:</strong> {{ profile.roleLabel }}</p>
+        <p><strong>Organization:</strong> {{ profile.organization }}</p>
+        <p><strong>Email:</strong> {{ profile.email }}</p>
+      </div>
+
+      <div class="dashboard-card">
+        <h2>Quick summary</h2>
+        <p>This is the initial admin home screen.</p>
+        <p>Navigation is already prepared for final admin functionality.</p>
+      </div>
+    </div>
+  </section>
+</app-shell>

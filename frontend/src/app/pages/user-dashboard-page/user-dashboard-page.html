@@ -1,0 +1,33 @@
+<app-shell
+  sidebarTitle="User panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="dashboard-page">
+    <div class="dashboard-page__hero">
+      <h1>Welcome, User</h1>
+      <p>
+        You can request certificates, upload CSR files, review your certificates,
+        download available material and revoke certificates when needed.
+      </p>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h2>Profile overview</h2>
+        <p><strong>Name:</strong> {{ profile.fullName }}</p>
+        <p><strong>Role:</strong> {{ profile.roleLabel }}</p>
+        <p><strong>Organization:</strong> {{ profile.organization }}</p>
+        <p><strong>Email:</strong> {{ profile.email }}</p>
+      </div>
+
+      <div class="dashboard-card">
+        <h2>Quick summary</h2>
+        <p>This is the initial user home screen.</p>
+        <p>Sidebar options are prepared for final user functionality.</p>
+      </div>
+    </div>
+  </section>
+</app-shell>

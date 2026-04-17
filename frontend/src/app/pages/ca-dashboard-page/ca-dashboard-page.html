@@ -1,0 +1,33 @@
+<app-shell
+  sidebarTitle="CA panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="dashboard-page">
+    <div class="dashboard-page__hero">
+      <h1>Welcome, CA User</h1>
+      <p>
+        You can manage certificate-related actions for your organization and
+        access only organization-scoped certificate data.
+      </p>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <h2>Profile overview</h2>
+        <p><strong>Name:</strong> {{ profile.fullName }}</p>
+        <p><strong>Role:</strong> {{ profile.roleLabel }}</p>
+        <p><strong>Organization:</strong> {{ profile.organization }}</p>
+        <p><strong>Email:</strong> {{ profile.email }}</p>
+      </div>
+
+      <div class="dashboard-card">
+        <h2>Quick summary</h2>
+        <p>This is the initial CA user home screen.</p>
+        <p>Sidebar options are prepared for final CA functionality.</p>
+      </div>
+    </div>
+  </section>
+</app-shell>

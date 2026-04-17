@@ -1,0 +1,17 @@
+<aside class="sidebar">
+  <div class="sidebar__brand">
+    <div class="sidebar__logo">PKI</div>
+    <div>
+      <div class="sidebar__title">{{ title }}</div>
+      <div class="sidebar__subtitle">Management panel</div>
+    </div>
+  </div>
+
+  <nav class="sidebar__nav">
+    @for (item of items; track item.route) {
+      <a class="sidebar__link" [routerLink]="item.route">
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+</aside>

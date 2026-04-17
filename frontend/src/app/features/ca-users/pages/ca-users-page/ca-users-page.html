@@ -1,0 +1,121 @@
+<app-shell
+  sidebarTitle="Admin panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="entity-page">
+    <div class="entity-page__header">
+      <h1>CA Users</h1>
+      <p>Manage certification authority users assigned to existing organizations.</p>
+    </div>
+
+    <div class="entity-page__grid">
+      <div class="entity-panel">
+        <div class="entity-panel__header">
+          <h2>Create CA user</h2>
+          <p>Create a new CA user and assign the user to an existing organization.</p>
+        </div>
+
+        @if (errorMessage) {
+          <div class="form-error" style="margin-bottom: 1rem;">{{ errorMessage }}</div>
+        }
+
+        <form [formGroup]="caUserForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="firstName">First name</label>
+              <input id="firstName" type="text" formControlName="firstName" placeholder="Enter first name" />
+              @if (hasError('firstName', 'required')) {
+                <div class="form-error">First name is required.</div>
+              }
+              @if (hasError('firstName', 'minlength')) {
+                <div class="form-error">First name must have at least 2 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="lastName">Last name</label>
+              <input id="lastName" type="text" formControlName="lastName" placeholder="Enter last name" />
+              @if (hasError('lastName', 'required')) {
+                <div class="form-error">Last name is required.</div>
+              }
+              @if (hasError('lastName', 'minlength')) {
+                <div class="form-error">Last name must have at least 2 characters.</div>
+              }
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="email">Email address</label>
+              <input id="email" type="email" formControlName="email" placeholder="Enter email address" />
+              @if (hasError('email', 'required')) {
+                <div class="form-error">Email is required.</div>
+              }
+              @if (hasError('email', 'email')) {
+                <div class="form-error">Please enter a valid email address.</div>
+              }
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="organizationId">Organization</label>
+              <select id="organizationId" formControlName="organizationId">
+                <option value="">Select organization</option>
+                @for (organization of organizations; track organization.id) {
+                  <option [value]="organization.id">{{ organization.name }}</option>
+                }
+              </select>
+              @if (hasError('organizationId', 'required')) {
+                <div class="form-error">Organization is required.</div>
+              }
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-secondary" (click)="onReset()">Reset</button>
+            <button type="submit" class="btn-primary" [disabled]="loading || organizations.length === 0">
+              {{ loading ? 'Saving...' : 'Create CA user' }}
+            </button>
+          </div>
+        </form>
+
+        @if (createdSuccessfully) {
+          <div class="success-box">
+            CA user created successfully.
+          </div>
+        }
+      </div>
+
+      <div class="entity-panel">
+        <div class="entity-panel__header">
+          <h2>Existing CA users</h2>
+          <p>Certification authority users currently stored in the system.</p>
+        </div>
+
+        @if (loadingCaUsers) {
+          <p>Loading CA users...</p>
+        } @else if (caUsers.length === 0) {
+          <p>No CA users found.</p>
+        } @else {
+          <div class="entity-list">
+            @for (user of caUsers; track user.id) {
+              <div class="entity-list__card">
+                <div class="entity-list__top">
+                  <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+                  <span class="entity-badge entity-badge--status">{{ getStatusLabel(user.active) }}</span>
+                </div>
+
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Organization:</strong> {{ user.organizationName }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        @if (!loadingOrganizations && organizations.length === 0) {
+          <p style="margin-top: 1rem;">Create at least one organization before adding a CA user.</p>
+        }
+      </div>
+    </div>
+  </section>
+</app-shell>

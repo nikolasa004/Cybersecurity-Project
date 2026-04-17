@@ -1,0 +1,108 @@
+<div class="activation-page">
+  <div class="activation-card">
+    <div class="activation-card__header">
+      <h1>Activate account</h1>
+      <p>Set your password to activate your certification authority account.</p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="activation-alert activation-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="activation-alert activation-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (!invalidToken && !successMessage) {
+      <form [formGroup]="activationForm" (ngSubmit)="onSubmit()">
+        <div class="activation-form-group">
+          <label for="password">New password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            placeholder="Enter new password"
+          />
+
+          <div class="password-policy">
+            <div class="password-policy__item" [class.password-policy__item--ok]="passwordLength >= 15">
+              At least 15 characters
+            </div>
+            <div class="password-policy__item" [class.password-policy__item--ok]="passwordLength <= 64 && passwordLength > 0">
+              Maximum 64 characters
+            </div>
+            <div class="password-policy__item password-policy__item--ok">
+              All characters are allowed
+            </div>
+          </div>
+
+          <div class="strength-meter">
+            <div class="strength-meter__bar">
+              <div
+                class="strength-meter__fill"
+                [style.width.%]="strengthPercent"
+                [attr.data-score]="passwordScore"
+              ></div>
+            </div>
+            <div class="strength-meter__label">
+              Strength: {{ passwordStrengthLabel }}
+            </div>
+          </div>
+
+          @if (hasError('password', 'required')) {
+            <div class="form-error">Password is required.</div>
+          }
+          @if (hasError('password', 'passwordTooShort')) {
+            <div class="form-error">Password must have at least 15 characters.</div>
+          }
+          @if (hasError('password', 'passwordTooLong')) {
+            <div class="form-error">Password must not exceed 64 characters.</div>
+          }
+        </div>
+
+        <div class="activation-form-group">
+          <label for="confirmPassword">Confirm password</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Repeat new password"
+          />
+
+          @if (hasError('confirmPassword', 'required')) {
+            <div class="form-error">Password confirmation is required.</div>
+          }
+          @if (hasFormError('passwordsMismatch')) {
+            <div class="form-error">Passwords do not match.</div>
+          }
+        </div>
+
+        <div class="activation-actions">
+          <button type="submit" class="btn-primary" [disabled]="loading">
+            {{ loading ? 'Saving...' : 'Set password' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    @if (successMessage) {
+      <div class="activation-actions activation-actions--success">
+        <button type="button" class="btn-primary" (click)="goToLogin()">
+          Go to login
+        </button>
+      </div>
+    }
+
+    @if (invalidToken) {
+      <div class="activation-actions activation-actions--success">
+        <button type="button" class="btn-secondary" routerLink="/">
+          Back
+        </button>
+      </div>
+    }
+  </div>
+</div>

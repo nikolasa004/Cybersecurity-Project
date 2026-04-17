@@ -1,0 +1,145 @@
+<app-shell
+  sidebarTitle="Admin panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="entity-page">
+    <div class="entity-page__header">
+      <h1>Organizations</h1>
+      <p>Manage organizations available in the PKI system.</p>
+    </div>
+
+    <div class="entity-page__grid">
+      <div class="entity-panel">
+        <div class="entity-panel__header">
+          <h2>Create organization</h2>
+          <p>Enter organization details and save them to the system.</p>
+        </div>
+
+        @if (errorMessage) {
+          <div class="form-error" style="margin-bottom: 1rem;">{{ errorMessage }}</div>
+        }
+
+        <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-group form-group--full">
+              <label for="name">Organization name</label>
+              <input id="name" type="text" formControlName="name" placeholder="Enter organization name" />
+              @if (hasError('name', 'required')) {
+                <div class="form-error">Organization name is required.</div>
+              }
+              @if (hasError('name', 'minlength')) {
+                <div class="form-error">Organization name must have at least 2 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="registrationNumber">Registration number</label>
+              <input
+                id="registrationNumber"
+                type="text"
+                formControlName="registrationNumber"
+                placeholder="Enter registration number"
+              />
+              @if (hasError('registrationNumber', 'required')) {
+                <div class="form-error">Registration number is required.</div>
+              }
+              @if (hasError('registrationNumber', 'minlength')) {
+                <div class="form-error">Registration number must have at least 6 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="emailDomain">Email domain</label>
+              <input id="emailDomain" type="text" formControlName="emailDomain" placeholder="example.com" />
+              @if (hasError('emailDomain', 'required')) {
+                <div class="form-error">Email domain is required.</div>
+              }
+              @if (hasError('emailDomain', 'minlength')) {
+                <div class="form-error">Email domain must have at least 3 characters.</div>
+              }
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="address">Address</label>
+              <input id="address" type="text" formControlName="address" placeholder="Enter address" />
+              @if (hasError('address', 'required')) {
+                <div class="form-error">Address is required.</div>
+              }
+              @if (hasError('address', 'minlength')) {
+                <div class="form-error">Address must have at least 3 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="city">City</label>
+              <input id="city" type="text" formControlName="city" placeholder="Enter city" />
+              @if (hasError('city', 'required')) {
+                <div class="form-error">City is required.</div>
+              }
+              @if (hasError('city', 'minlength')) {
+                <div class="form-error">City must have at least 2 characters.</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="country">Country</label>
+              <input id="country" type="text" formControlName="country" placeholder="Enter country" />
+              @if (hasError('country', 'required')) {
+                <div class="form-error">Country is required.</div>
+              }
+              @if (hasError('country', 'minlength')) {
+                <div class="form-error">Country must have at least 2 characters.</div>
+              }
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-secondary" (click)="onReset()">Reset</button>
+            <button type="submit" class="btn-primary" [disabled]="loading">
+              {{ loading ? 'Saving...' : 'Create organization' }}
+            </button>
+          </div>
+        </form>
+
+        @if (createdSuccessfully) {
+          <div class="success-box">
+            Organization created successfully.
+          </div>
+        }
+      </div>
+
+      <div class="entity-panel">
+        <div class="entity-panel__header">
+          <h2>Existing organizations</h2>
+          <p>Organizations currently stored in the system.</p>
+        </div>
+
+        @if (loadingOrganizations) {
+          <p>Loading organizations...</p>
+        } @else if (organizations.length === 0) {
+          <p>No organizations found.</p>
+        } @else {
+          <div class="entity-list">
+            @for (organization of organizations; track organization.id) {
+              <div class="entity-list__card">
+                <div class="entity-list__top">
+                  <h3>{{ organization.name }}</h3>
+                  <span class="entity-badge">Organization</span>
+                </div>
+
+                <p><strong>Registration number:</strong> {{ organization.registrationNumber }}</p>
+                <p><strong>Address:</strong> {{ organization.address }}</p>
+                <p><strong>City:</strong> {{ organization.city }}</p>
+                <p><strong>Country:</strong> {{ organization.country }}</p>
+                <p><strong>Email domain:</strong> {{ organization.emailDomain }}</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+</app-shell>
