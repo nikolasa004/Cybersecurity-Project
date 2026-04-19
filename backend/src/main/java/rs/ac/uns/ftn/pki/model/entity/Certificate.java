@@ -75,12 +75,6 @@ public class Certificate {
     private String encodedCertificate;
 
     @Column(length = 255)
-    private String keystoreAlias;
-
-    @Column(length = 255)
-    private String privateKeyAlias;
-
-    @Column(length = 255)
     private String issuerCommonNameSnapshot;
 
     @Column(length = 255)

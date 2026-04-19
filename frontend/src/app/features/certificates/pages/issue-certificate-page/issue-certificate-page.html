@@ -8,7 +8,7 @@
   <section class="issue-page">
     <div class="issue-page__header">
       <h1>Issue certificate</h1>
-      <p>Prepare certificate subject data, choose a valid issuer and define certificate usage.</p>
+      <p>Create root, intermediate and end-entity certificates from the administrator dashboard.</p>
     </div>
 
     @if (errorMessage) {
@@ -17,13 +17,19 @@
       </div>
     }
 
+    @if (successMessage) {
+      <div class="issue-alert issue-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
     <div class="issue-panel">
       <form [formGroup]="issueForm" (ngSubmit)="onSubmit()">
         <div class="issue-section">
-          <h2>Certificate type</h2>
+          <h2>Certificate type and issuer</h2>
 
           <div class="form-grid">
-            <div class="form-group form-group--full">
+            <div class="form-group">
               <label for="type">Type</label>
               <select id="type" formControlName="type">
                 <option value="ROOT">Root</option>
@@ -32,11 +38,17 @@
               </select>
             </div>
 
-            <div class="form-group form-group--full">
+            <div class="form-group">
               <label for="issuerCertificateId">Issuer certificate</label>
-              <select id="issuerCertificateId" formControlName="issuerCertificateId" [disabled]="issueForm.value.type === 'ROOT'">
+              <select
+                id="issuerCertificateId"
+                formControlName="issuerCertificateId"
+                [disabled]="issueForm.value.type === 'ROOT' || loadingIssuers"
+              >
                 @if (issueForm.value.type === 'ROOT') {
                   <option value="">Self-signed root certificate</option>
+                } @else if (loadingIssuers) {
+                  <option value="">Loading issuer certificates...</option>
                 } @else {
                   <option value="">Select issuer</option>
                   @for (issuer of issuers; track issuer.id) {
@@ -44,6 +56,10 @@
                   }
                 }
               </select>
+
+              @if (hasError('issuerCertificateId', 'required')) {
+                <div class="form-error">Issuer certificate is required for non-root certificates.</div>
+              }
             </div>
           </div>
         </div>
@@ -80,10 +96,19 @@
               <label for="locality">Locality (L)</label>
               <input id="locality" type="text" formControlName="locality" placeholder="Enter locality" />
             </div>
-
+            
             <div class="form-group">
-              <label for="organization">Organization (O)</label>
-              <input id="organization" type="text" formControlName="organization" placeholder="Enter organization" />
+              <label for="organizationId">Organization (O)</label>
+              <select id="organizationId" formControlName="organizationId">
+                <option value="">Select organization</option>
+                @for (organization of organizations; track organization.id) {
+                  <option [value]="organization.id">{{ organization.name }}</option>
+                }
+              </select>
+
+              @if (loadingOrganizations) {
+                <div class="form-hint">Loading organizations...</div>
+              }
             </div>
 
             <div class="form-group">
@@ -107,7 +132,7 @@
         </div>
 
         <div class="issue-section">
-          <h2>Validity</h2>
+          <h2>Validity period</h2>
 
           <div class="form-grid">
             <div class="form-group">
@@ -129,7 +154,7 @@
         </div>
 
         <div class="issue-section">
-          <h2>Key usage and capabilities</h2>
+          <h2>Capabilities</h2>
 
           <div class="issue-checkbox-grid">
             <label class="issue-checkbox">
@@ -156,11 +181,14 @@
 
         <div class="issue-panel__footer">
           <p>
-            Issuer options are loaded from backend. Certificate submission will be connected when the issuing endpoint is implemented.
+            Review all fields carefully before issuing the certificate. Issuer validation and certificate generation are handled by the backend.
           </p>
 
           <div class="actions">
-            <button type="submit" class="btn-primary">Issue certificate</button>
+            <button type="button" class="btn-secondary" (click)="goToCertificates()">Back to certificates</button>
+            <button type="submit" class="btn-primary" [disabled]="submitting">
+              {{ submitting ? 'Issuing...' : 'Issue certificate' }}
+            </button>
           </div>
         </div>
       </form>

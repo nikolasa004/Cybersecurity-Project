@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config/api.config';
 import { CertificateListItem } from '../models/certificate-list.model';
 import { IssuerOption } from '../models/issuer-option.model';
+import { IssueCertificateRequest } from '../models/issue-certificate-request.model';
 
 @Injectable({
   providedIn: 'root'
@@ -20,5 +21,9 @@ export class CertificatesService {
     return this.http.get<IssuerOption[]>(`${this.baseUrl}/issuers`, {
       params: { targetType }
     });
+  }
+
+  issue(payload: IssueCertificateRequest): Observable<CertificateListItem> {
+    return this.http.post<CertificateListItem>(`${this.baseUrl}/issue`, payload);
   }
 }
