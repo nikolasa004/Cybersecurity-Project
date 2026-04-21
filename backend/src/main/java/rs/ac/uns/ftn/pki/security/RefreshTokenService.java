@@ -29,18 +29,38 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken createRefreshToken(Long userId) {
-        User user = userRepository.findById(userId).get();
-
-        // ROTACIJA: Brišemo prethodni token korisnika ako postoji
-        refreshTokenRepository.deleteByUser(user);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
                 .token(UUID.randomUUID().toString())
                 .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
+                .used(false)
                 .build();
 
         return refreshTokenRepository.save(refreshToken);
+    }
+
+    @Transactional
+    public String rotateToken(String oldToken) {
+        RefreshToken token = refreshTokenRepository.findByToken(oldToken)
+                .orElseThrow(() -> new RuntimeException("Token not found!"));
+
+        if (token.isUsed()) {
+            refreshTokenRepository.deleteByUser(token.getUser());
+            throw new RuntimeException("SECURITY ALERT: Compromised token used. All sessions revoked.");
+        }
+
+        if (token.getExpiryDate().isBefore(Instant.now())) {
+            refreshTokenRepository.delete(token);
+            throw new RuntimeException("Refresh token expired.");
+        }
+
+        token.setUsed(true);
+        refreshTokenRepository.save(token);
+
+        return createRefreshToken(token.getUser().getId()).getToken();
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
