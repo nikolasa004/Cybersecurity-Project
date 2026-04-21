@@ -40,7 +40,7 @@ public class User {
     @Column(nullable = false)
     private boolean active;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "organization_id")
     private Organization organization;
 
