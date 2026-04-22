@@ -59,7 +59,7 @@ public class DataInitializer implements CommandLineRunner {
         User caFtn = new User();
         caFtn.setFirstName("Nikola");
         caFtn.setLastName("Savic");
-        caFtn.setEmail("causer1@ftn.com");
+        caFtn.setEmail("causer1@pki.com");
         caFtn.setPasswordHash(passwordEncoder.encode("causer123"));
         caFtn.setRole(UserRole.CA_USER);
         caFtn.setActive(true);
@@ -69,7 +69,7 @@ public class DataInitializer implements CommandLineRunner {
         User userFtn = new User();
         userFtn.setFirstName("Lazar");
         userFtn.setLastName("Vilotoc");
-        userFtn.setEmail("user1@ftn.com");
+        userFtn.setEmail("user1@pki.com");
         userFtn.setPasswordHash(passwordEncoder.encode("user123"));
         userFtn.setRole(UserRole.USER);
         userFtn.setActive(true);
@@ -79,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
         User caNextesy = new User();
         caNextesy.setFirstName("Uros");
         caNextesy.setLastName("Milinovic");
-        caNextesy.setEmail("causer2@nextesy.com");
+        caNextesy.setEmail("causer2@pki.com");
         caNextesy.setPasswordHash(passwordEncoder.encode("causer123"));
         caNextesy.setRole(UserRole.CA_USER);
         caNextesy.setActive(true);
