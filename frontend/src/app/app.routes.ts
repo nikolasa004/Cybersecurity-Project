@@ -8,18 +8,47 @@ import { CaUsersPage } from './features/ca-users/pages/ca-users-page/ca-users-pa
 import { ActivateAccountPage } from './features/auth/pages/activate-account-page/activate-account-page';
 import { AdminCertificatesPage } from './features/certificates/pages/admin-certificates-page/admin-certificates-page';
 import { IssueCertificatePage } from './features/certificates/pages/issue-certificate-page/issue-certificate-page';
+import { AuthLayout } from './layouts/auth-layout/auth-layout';
+import { LoginPage } from './features/auth/pages/login-page/login-page';
+import { roleGuard } from './core/guards/role.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: LandingPage },
 
-  { path: 'admin', component: AdminDashboardPage },
-  { path: 'admin/organizations', component: OrganizationsPage },
-  { path: 'admin/ca-users', component: CaUsersPage },
-  { path: 'admin/certificates', component: AdminCertificatesPage },
-  { path: 'admin/certificates/issue', component: IssueCertificatePage },
+  {
+    path: 'auth',
+    component: AuthLayout,
+    children: [
+      { path: 'login', component: LoginPage }
+    ]
+  },
 
-  { path: 'ca', component: CaDashboardPage },
-  { path: 'user', component: UserDashboardPage },
+  { 
+    path: 'admin', 
+    canActivate: [authGuard, roleGuard], 
+    data: { roles: ['ADMIN'] },
+    children: [
+      { path: '', component: AdminDashboardPage },
+      { path: 'organizations', component: OrganizationsPage },
+      { path: 'ca-users', component: CaUsersPage },
+      { path: 'certificates', component: AdminCertificatesPage },
+      { path: 'certificates/issue', component: IssueCertificatePage },
+    ]
+  },
+
+  { 
+    path: 'ca', 
+    component: CaDashboardPage, 
+    canActivate: [authGuard, roleGuard], 
+    data: { roles: ['CA_USER'] } 
+  },
+  { 
+    path: 'user', 
+    component: UserDashboardPage, 
+    canActivate: [authGuard, roleGuard], 
+    data: { roles: ['USER'] } 
+  },
 
   { path: 'activate', component: ActivateAccountPage },
 
