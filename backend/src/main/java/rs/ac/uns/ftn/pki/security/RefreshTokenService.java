@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import rs.ac.uns.ftn.pki.exception.SecurityAlertException;
 import rs.ac.uns.ftn.pki.model.entity.RefreshToken;
 import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.repository.RefreshTokenRepository;
@@ -42,14 +43,14 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshToken);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = SecurityAlertException.class)
     public String rotateToken(String oldToken) {
         RefreshToken token = refreshTokenRepository.findByToken(oldToken)
                 .orElseThrow(() -> new RuntimeException("Token not found!"));
 
         if (token.isUsed()) {
             refreshTokenRepository.deleteByUser(token.getUser());
-            throw new RuntimeException("SECURITY ALERT: Compromised token used. All sessions revoked.");
+            throw new SecurityAlertException("SECURITY ALERT: Compromised token used. All sessions revoked.");
         }
 
         if (token.getExpiryDate().isBefore(Instant.now())) {
