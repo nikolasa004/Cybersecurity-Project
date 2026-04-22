@@ -9,10 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import rs.ac.uns.ftn.pki.dto.auth.LoginRequest;
-import rs.ac.uns.ftn.pki.dto.auth.LoginResponse;
-import rs.ac.uns.ftn.pki.dto.auth.TokenRefreshRequest;
-import rs.ac.uns.ftn.pki.dto.auth.TokenRefreshResponse;
+import rs.ac.uns.ftn.pki.dto.auth.*;
 import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.security.JwtService;
 import rs.ac.uns.ftn.pki.security.RefreshTokenService;
@@ -57,9 +54,10 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(Authentication authentication) {
-        User user = (User) authentication.getPrincipal();
-        refreshTokenService.deleteByUserId(user.getId());
+    public ResponseEntity<?> logout(@RequestBody LogoutRequest request) {
+        if (request.refreshToken() != null) {
+            refreshTokenService.deleteByToken(request.refreshToken());
+        }
         return ResponseEntity.ok("Logged out successfully");
     }
 }
