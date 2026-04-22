@@ -13,6 +13,7 @@ import { NAVIGATION_BY_ROLE } from '../../core/config/role-navigation';
 export class AdminDashboardPage {
   navItems = NAVIGATION_BY_ROLE.ADMIN;
 
+
   profile = {
     fullName: 'Admin Administrator',
     roleLabel: 'Administrator',

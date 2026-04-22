@@ -45,4 +45,9 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(SecurityAlertException.class)
+    public ResponseEntity<?> handleSecurityAlert(SecurityAlertException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
 }
