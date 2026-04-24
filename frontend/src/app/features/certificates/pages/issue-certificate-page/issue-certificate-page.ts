@@ -80,6 +80,7 @@ export class IssueCertificatePage implements OnInit {
   }
 
   onSubmit(): void {
+    console.log('Form submitted with value:', this.issueForm.value);
     this.submitted = true;
     this.errorMessage = '';
     this.successMessage = '';
