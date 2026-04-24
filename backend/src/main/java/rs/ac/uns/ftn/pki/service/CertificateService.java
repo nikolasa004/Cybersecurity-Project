@@ -11,4 +11,6 @@ public interface CertificateService {
     List<CertificateListResponse> getAllForAdmin();
     List<IssuerOptionResponse> getAvailableIssuers(CertificateType targetType);
     CertificateListResponse issueCertificate(IssueCertificateRequest request);
+    List<IssuerOptionResponse> getAvailableIssuersForCa();
+    CertificateListResponse issueCertificateAsCa(IssueCertificateRequest request);
 }
