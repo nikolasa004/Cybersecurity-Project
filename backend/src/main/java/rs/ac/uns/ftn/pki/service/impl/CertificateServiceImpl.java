@@ -360,4 +360,15 @@ public class CertificateServiceImpl implements CertificateService {
             throw new BadRequestException("Failed to convert issuer certificate.");
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CertificateListResponse> getAllForCa() {
+        User currentUser = authService.getLoggedInUser();
+
+        return certificateRepository.findAllByOrganizationOrderByCreatedAtDesc(currentUser.getOrganization())
+                .stream()
+                .map(certificateMapper::toListResponse)
+                .toList();
+    }
 }

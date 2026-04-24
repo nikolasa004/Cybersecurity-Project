@@ -32,4 +32,6 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
             @Param("organization") Organization organization,
             @Param("now") LocalDateTime now
     );
+
+    List<Certificate> findAllByOrganizationOrderByCreatedAtDesc(Organization organization);
 }

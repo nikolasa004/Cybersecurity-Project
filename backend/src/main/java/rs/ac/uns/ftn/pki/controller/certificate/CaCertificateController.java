@@ -22,6 +22,11 @@ public class CaCertificateController {
 
     private final CertificateService certificateService;
 
+    @GetMapping
+    public ResponseEntity<List<CertificateListResponse>> getAll() {
+        return ResponseEntity.ok(certificateService.getAllForCa());
+    }
+
     @GetMapping("/issuers")
     public ResponseEntity<List<IssuerOptionResponse>> getAvailableIssuers() {
         return ResponseEntity.ok(certificateService.getAvailableIssuersForCa());
