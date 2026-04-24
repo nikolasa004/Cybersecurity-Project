@@ -5,6 +5,7 @@ import { AppShell } from '../../../../shared/components/app-shell/app-shell';
 import { NAVIGATION_BY_ROLE } from '../../../../core/config/role-navigation';
 import { CertificatesService } from '../../services/certificates.service';
 import { CertificateListItem } from '../../models/certificate-list.model';
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
   selector: 'app-admin-certificates-page',
@@ -15,14 +16,19 @@ import { CertificateListItem } from '../../models/certificate-list.model';
 })
 export class AdminCertificatesPage implements OnInit {
   private certificatesService = inject(CertificatesService);
+  private authService = inject(AuthService);
 
-  navItems = NAVIGATION_BY_ROLE.ADMIN;
+  isAdmin = this.authService.getRole() === 'ADMIN';
+  navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
 
   profile = {
-    fullName: 'Administrator session',
-    roleLabel: 'Administrator',
-    organization: 'PKI system'
+    fullName: this.isAdmin ? 'Administrator session' : 'CA User session',
+    roleLabel: this.isAdmin ? 'Administrator' : 'CA Representative',
+    organization: this.isAdmin ? 'PKI system' : this.authService.getUserOrganizationName() || 'Unknown Organization'
   };
+
+  issueRoute = this.isAdmin ? '/admin/certificates/issue' : '/ca/certificates/issue';
+  sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
 
   certificates: CertificateListItem[] = [];
   loading = false;
@@ -36,7 +42,7 @@ export class AdminCertificatesPage implements OnInit {
     this.loading = true;
     this.errorMessage = '';
 
-    this.certificatesService.getAll().subscribe({
+    this.certificatesService.getAll(this.isAdmin).subscribe({
       next: (certificates) => {
         this.certificates = certificates;
         this.loading = false;

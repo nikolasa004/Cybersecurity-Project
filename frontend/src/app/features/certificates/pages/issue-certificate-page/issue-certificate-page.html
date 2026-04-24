@@ -8,7 +8,9 @@
   <section class="issue-page">
     <div class="issue-page__header">
       <h1>Issue certificate</h1>
-      <p>Create root, intermediate and end-entity certificates from the administrator dashboard.</p>
+      <p>
+        {{ isAdmin ? 'Create root, intermediate and end-entity certificates.' : 'Create certificates for your organization.' }}
+      </p>
     </div>
 
     @if (errorMessage) {
@@ -32,7 +34,7 @@
             <div class="form-group">
               <label for="type">Type</label>
               <select id="type" formControlName="type">
-                <option value="ROOT">Root</option>
+                @if (isAdmin) { <option value="ROOT">Root</option> }
                 <option value="INTERMEDIATE">Intermediate</option>
                 <option value="END_ENTITY">End-Entity</option>
               </select>
@@ -99,12 +101,17 @@
             
             <div class="form-group">
               <label for="organizationId">Organization (O)</label>
-              <select id="organizationId" formControlName="organizationId">
-                <option value="">Select organization</option>
-                @for (organization of organizations; track organization.id) {
-                  <option [value]="organization.id">{{ organization.name }}</option>
-                }
-              </select>
+              @if (isAdmin) {
+                <select id="organizationId" formControlName="organizationId">
+                  <option value="">Select organization</option>
+                  @for (org of organizations; track org.id) {
+                    <option [value]="org.id">{{ org.name }}</option>
+                  }
+                </select>
+              } @else {
+                <input type="text" [value]="profile.organization" disabled />
+                <input type="hidden" formControlName="organizationId" />
+              }
 
               @if (loadingOrganizations) {
                 <div class="form-hint">Loading organizations...</div>

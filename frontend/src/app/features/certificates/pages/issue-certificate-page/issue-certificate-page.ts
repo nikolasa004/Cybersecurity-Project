@@ -8,6 +8,7 @@ import { CertificatesService } from '../../services/certificates.service';
 import { IssuerOption } from '../../models/issuer-option.model';
 import { OrganizationsService } from '../../../organizations/services/organizations.service';
 import { Organization } from '../../../organizations/models/organization.model';
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
   selector: 'app-issue-certificate-page',
@@ -21,19 +22,21 @@ export class IssueCertificatePage implements OnInit {
   private router = inject(Router);
   private certificatesService = inject(CertificatesService);
   private organizationsService = inject(OrganizationsService);
+  private authService = inject(AuthService);
 
-  navItems = NAVIGATION_BY_ROLE.ADMIN;
-
-  lastIssuedCertificateName = '';
+  isAdmin = this.authService.getRole() === 'ADMIN';
+  navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
 
   profile = {
-    fullName: 'Administrator session',
-    roleLabel: 'Administrator',
-    organization: 'PKI system'
+    fullName: this.isAdmin ? 'Administrator session' : 'CA User session',
+    roleLabel: this.isAdmin ? 'Administrator' : 'CA Representative',
+    organization: this.isAdmin ? 'PKI system' : this.authService.getUserOrganizationName() || 'Unknown Organization'
   };
 
+  sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
+
   issueForm: FormGroup = this.fb.group({
-    type: ['END_ENTITY', [Validators.required]],
+    type: [this.isAdmin ? 'ROOT' : 'INTERMEDIATE', [Validators.required]],
     issuerCertificateId: [''],
     organizationId: [''],
     commonName: ['', [Validators.required, Validators.minLength(2)]],
@@ -45,10 +48,10 @@ export class IssueCertificatePage implements OnInit {
     subjectSerialNumber: [''],
     validFrom: ['', [Validators.required]],
     validTo: ['', [Validators.required]],
-    ca: [false],
-    keyCertSign: [false],
+    ca: [true],
+    keyCertSign: [true],
     digitalSignature: [true],
-    keyEncipherment: [true]
+    keyEncipherment: [false]
   });
 
   submitted = false;
@@ -63,7 +66,11 @@ export class IssueCertificatePage implements OnInit {
 
   ngOnInit(): void {
     this.applyTypeDefaults(this.issueForm.value.type);
-    this.loadOrganizations();
+    if (this.isAdmin) {
+      this.loadOrganizations();
+    } else {
+      this.issueForm.patchValue({ organizationId: this.authService.getUserOrganizationId() });
+    }
     this.loadIssuersForType(this.issueForm.value.type);
 
     this.issueForm.get('type')?.valueChanges.subscribe((type) => {
@@ -84,79 +91,44 @@ export class IssueCertificatePage implements OnInit {
       return;
     }
 
-    const selectedOrganization = this.organizations.find(
-      (organization) => organization.id === Number(this.issueForm.value.organizationId)
-    );
-
     const payload = {
-      type: this.issueForm.value.type,
-      issuerCertificateId:
-        this.issueForm.value.type === 'ROOT' || !this.issueForm.value.issuerCertificateId
-          ? null
-          : Number(this.issueForm.value.issuerCertificateId),
-      organizationId: this.issueForm.value.organizationId
-        ? Number(this.issueForm.value.organizationId)
-        : null,
-      commonName: this.issueForm.value.commonName,
-      country: this.normalizeOptional(this.issueForm.value.country),
-      state: this.normalizeOptional(this.issueForm.value.state),
-      locality: this.normalizeOptional(this.issueForm.value.locality),
-      organization: selectedOrganization ? selectedOrganization.name : null,
-      organizationalUnit: this.normalizeOptional(this.issueForm.value.organizationalUnit),
-      email: this.normalizeOptional(this.issueForm.value.email),
-      subjectSerialNumber: this.normalizeOptional(this.issueForm.value.subjectSerialNumber),
-      validFrom: this.toIsoDateTime(this.issueForm.value.validFrom),
-      validTo: this.toIsoDateTime(this.issueForm.value.validTo),
-      ca: !!this.issueForm.value.ca,
-      keyCertSign: !!this.issueForm.value.keyCertSign,
-      digitalSignature: !!this.issueForm.value.digitalSignature,
-      keyEncipherment: !!this.issueForm.value.keyEncipherment
+      ...this.issueForm.value,
+      issuerCertificateId: this.issueForm.value.type === 'ROOT' ? null : Number(this.issueForm.value.issuerCertificateId),
+      organizationId: Number(this.issueForm.value.organizationId),
+      validFrom: new Date(this.issueForm.value.validFrom).toISOString(),
+      validTo: new Date(this.issueForm.value.validTo).toISOString()
     };
 
     this.submitting = true;
 
-    this.certificatesService.issue(payload).subscribe({
-    next: (createdCertificate) => {
-      this.submitting = false;
-      this.lastIssuedCertificateName =
-        createdCertificate.subjectCommonName || 'Certificate';
-
-      this.successMessage = `Certificate "${this.lastIssuedCertificateName}" was issued successfully.`;
-
-      this.issueForm.reset({
-        type: 'END_ENTITY',
-        issuerCertificateId: '',
-        organizationId: '',
-        commonName: '',
-        country: 'RS',
-        state: '',
-        locality: '',
-        organizationalUnit: '',
-        email: '',
-        subjectSerialNumber: '',
-        validFrom: '',
-        validTo: '',
-        ca: false,
-        keyCertSign: false,
-        digitalSignature: true,
-        keyEncipherment: true
-      },
-       { emitEvent: false }
-      );
-
-      this.submitted = false;
-      this.applyTypeDefaults('END_ENTITY');
-      this.loadIssuersForType('END_ENTITY');
-    },
-      error: (error) => {
+    this.certificatesService.issue(payload, this.isAdmin).subscribe({
+      next: (created) => {
         this.submitting = false;
-        this.errorMessage = error?.error?.message || 'Failed to issue certificate.';
+        this.successMessage = `Certificate "${created.subjectCommonName}" issued successfully.`;
+        this.resetForm();
+      },
+      error: (err) => {
+        this.submitting = false;
+        this.errorMessage = err?.error?.message || 'Failed to issue certificate.';
       }
     });
   }
 
+  private resetForm(): void {
+    const defaultType = this.isAdmin ? 'ROOT' : 'INTERMEDIATE';
+    this.issueForm.reset({
+      type: defaultType,
+      country: 'RS',
+      organizationId: this.isAdmin ? '' : this.authService.getUserOrganizationId()
+    });
+    this.submitted = false;
+    this.applyTypeDefaults(defaultType);
+    this.loadIssuersForType(defaultType);
+  }
+
   goToCertificates(): void {
-    this.router.navigateByUrl('/admin/certificates');
+    const path = this.isAdmin ? '/admin/certificates' : '/ca/certificates';
+    this.router.navigateByUrl(path);
   }
 
   hasError(controlName: string, errorName: string): boolean {
@@ -166,39 +138,28 @@ export class IssueCertificatePage implements OnInit {
 
   private loadOrganizations(): void {
     this.loadingOrganizations = true;
-
     this.organizationsService.getAll().subscribe({
-      next: (organizations) => {
-        this.organizations = organizations;
+      next: (orgs) => {
+        this.organizations = orgs;
         this.loadingOrganizations = false;
-      },
-      error: (error) => {
-        this.loadingOrganizations = false;
-        this.errorMessage = error?.error?.message || 'Failed to load organizations.';
       }
     });
   }
 
-  private loadIssuersForType(type: 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY'): void {
+  private loadIssuersForType(type: string): void {
     if (type === 'ROOT') {
       this.issuers = [];
-      this.issueForm.patchValue({ issuerCertificateId: '' }, { emitEvent: false });
-      this.loadingIssuers = false;
       return;
     }
-
     this.loadingIssuers = true;
-    this.errorMessage = '';
-
-    this.certificatesService.getAvailableIssuers(type).subscribe({
+    this.certificatesService.getAvailableIssuers(this.isAdmin, type).subscribe({
       next: (issuers) => {
         this.issuers = issuers;
         this.loadingIssuers = false;
       },
-      error: (error) => {
-        this.issuers = [];
+      error: () => {
         this.loadingIssuers = false;
-        this.errorMessage = error?.error?.message || 'Failed to load available issuers.';
+        this.errorMessage = 'Failed to load issuers.';
       }
     });
   }

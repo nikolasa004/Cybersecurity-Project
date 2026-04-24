@@ -3,6 +3,7 @@ export interface LoginResponse {
   refreshToken: string;
   role: string;
   organizationId: number | null;
+  organizationName?: string;
 }
 
 export interface TokenRefreshResponse {

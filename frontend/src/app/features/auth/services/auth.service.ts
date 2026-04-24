@@ -54,7 +54,17 @@ export class AuthService {
     localStorage.setItem('role', response.role);
     if (response.organizationId) {
       localStorage.setItem('organizationId', response.organizationId.toString());
+      localStorage.setItem('organizationName', response.organizationName || 'System Admin');
     }
+  }
+
+  getUserOrganizationId(): number | null {
+    const orgId = localStorage.getItem('organizationId');
+    return orgId ? parseInt(orgId, 10) : null;
+  }
+
+  getUserOrganizationName(): string | null {
+    return localStorage.getItem('organizationName');
   }
 
   getAccessToken(): string | null {
