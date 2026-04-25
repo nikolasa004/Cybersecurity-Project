@@ -251,7 +251,7 @@ public class CertificateServiceImpl implements CertificateService {
         Certificate issuer = certificateRepository.findById(request.getIssuerCertificateId())
                 .orElseThrow(() -> new NotFoundException("Issuer not found"));
 
-        validateIssuerForCa(issuer, request, currentUser);
+        validateCertificateForCa(issuer, request, currentUser);
 
         X500SubjectData subjectData = certificateSubjectMapper.fromIssueRequest(request);
         X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
@@ -292,7 +292,16 @@ public class CertificateServiceImpl implements CertificateService {
         return certificateMapper.toListResponse(saved);
     }
 
-    private void validateIssuerForCa(Certificate issuer, IssueCertificateRequest request, User currentUser) {
+    private void validateCertificateForCa(Certificate issuer, IssueCertificateRequest request, User currentUser) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (request.getValidFrom().isBefore(now.minusMinutes(5))) {
+            throw new BadRequestException("The certificate start date cannot be in the past.");
+        }
+
+        if (!request.getValidTo().isAfter(request.getValidFrom())) {
+            throw new BadRequestException("The expiration date must be after the start date.");
+        }
 
         if (issuer.getOrganization() != null && !issuer.getOrganization().getId().equals(currentUser.getOrganization().getId())) {
             throw new BadRequestException("The issuer must belong to your organization or be RootCA.");
@@ -323,6 +332,21 @@ public class CertificateServiceImpl implements CertificateService {
         }
 
         verifyDigitalSignature(issuer);
+        validateExtensions(request);
+    }
+
+    private void validateExtensions(IssueCertificateRequest request) {
+        if (request.getType() == CertificateType.END_ENTITY) {
+            if (request.isCa() || request.isKeyCertSign()) {
+                throw new BadRequestException("End-entity certificates cannot have CA or KeyCertSign capabilities.");
+            }
+        }
+
+        if (request.getType() == CertificateType.INTERMEDIATE || request.getType() == CertificateType.ROOT) {
+            if (!request.isCa() || !request.isKeyCertSign()) {
+                throw new BadRequestException("CA certificates must have CA and KeyCertSign capabilities enabled.");
+            }
+        }
     }
 
 

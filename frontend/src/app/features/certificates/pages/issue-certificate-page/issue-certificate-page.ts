@@ -35,6 +35,8 @@ export class IssueCertificatePage implements OnInit {
 
   sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
 
+  minDate: string = this.formatDateForInput(new Date());
+
   issueForm: FormGroup = this.fb.group({
     type: [this.isAdmin ? 'ROOT' : 'INTERMEDIATE', [Validators.required]],
     issuerCertificateId: [''],
@@ -52,7 +54,17 @@ export class IssueCertificatePage implements OnInit {
     keyCertSign: [true],
     digitalSignature: [true],
     keyEncipherment: [false]
-  });
+  }, { validators: this.dateComparisonValidator});
+
+  private dateComparisonValidator(group: FormGroup): any {
+    const from = group.get('validFrom')?.value;
+    const to = group.get('validTo')?.value;
+    
+    if (from && to && new Date(from) >= new Date(to)) {
+      return { datesInvalid: true };
+    }
+    return null;
+  }
 
   submitted = false;
   loadingIssuers = false;
@@ -63,6 +75,8 @@ export class IssueCertificatePage implements OnInit {
 
   issuers: IssuerOption[] = [];
   organizations: Organization[] = [];
+
+  issuerMaxDate: string | null = null;
 
   ngOnInit(): void {
     this.applyTypeDefaults(this.issueForm.value.type);
@@ -77,10 +91,41 @@ export class IssueCertificatePage implements OnInit {
       this.applyTypeDefaults(type);
       this.loadIssuersForType(type);
     });
+
+    this.issueForm.get('issuerCertificateId')?.valueChanges.subscribe((id) => {
+      this.updateMaxDate(id);
+    });
+  }
+
+  private updateMaxDate(issuerId: string | number): void {
+    if (!issuerId || this.issueForm.value.type === 'ROOT') {
+      this.issuerMaxDate = null;
+      return;
+    }
+
+    const selectedIssuer = this.issuers.find(i => i.id === Number(issuerId));
+    
+    if (selectedIssuer && selectedIssuer.validTo) {
+      this.issuerMaxDate = this.formatDateForInput(selectedIssuer.validTo);
+      
+      const currentValidTo = this.issueForm.get('validTo')?.value;
+      if (currentValidTo && currentValidTo > this.issuerMaxDate) {
+        this.issueForm.patchValue({ validTo: '' });
+      }
+    }
+  }
+
+  private formatDateForInput(dateInput: string | Date): string {
+    const d = new Date(dateInput);
+    const year = d.getFullYear();
+    const month = ('0' + (d.getMonth() + 1)).slice(-2);
+    const day = ('0' + d.getDate()).slice(-2);
+    const hours = ('0' + d.getHours()).slice(-2);
+    const minutes = ('0' + d.getMinutes()).slice(-2);
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   onSubmit(): void {
-    console.log('Form submitted with value:', this.issueForm.value);
     this.submitted = true;
     this.errorMessage = '';
     this.successMessage = '';
@@ -92,12 +137,18 @@ export class IssueCertificatePage implements OnInit {
       return;
     }
 
+    const formValue = this.issueForm.getRawValue();
+
     const payload = {
-      ...this.issueForm.value,
-      issuerCertificateId: this.issueForm.value.type === 'ROOT' ? null : Number(this.issueForm.value.issuerCertificateId),
-      organizationId: Number(this.issueForm.value.organizationId),
-      validFrom: new Date(this.issueForm.value.validFrom).toISOString(),
-      validTo: new Date(this.issueForm.value.validTo).toISOString()
+      ...formValue,
+      issuerCertificateId: formValue.type === 'ROOT' ? null : Number(formValue.issuerCertificateId),
+      organizationId: Number(formValue.organizationId),
+      validFrom: new Date(formValue.validFrom).toISOString(),
+      validTo: new Date(formValue.validTo).toISOString(),
+      ca: !!formValue.ca,
+      keyCertSign: !!formValue.keyCertSign,
+      digitalSignature: !!formValue.digitalSignature,
+      keyEncipherment: !!formValue.keyEncipherment
     };
 
     this.submitting = true;
@@ -166,42 +217,30 @@ export class IssueCertificatePage implements OnInit {
   }
 
   private applyTypeDefaults(type: 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY'): void {
-    if (type === 'ROOT') {
-      this.issueForm.patchValue(
-        {
-          issuerCertificateId: '',
-          ca: true,
-          keyCertSign: true,
-          digitalSignature: true,
-          keyEncipherment: false
-        },
-        { emitEvent: false }
-      );
-      return;
-    }
+    const caCtrl = this.issueForm.get('ca');
+    const keySignCtrl = this.issueForm.get('keyCertSign');
 
-    if (type === 'INTERMEDIATE') {
-      this.issueForm.patchValue(
-        {
-          ca: true,
-          keyCertSign: true,
-          digitalSignature: true,
-          keyEncipherment: false
-        },
-        { emitEvent: false }
-      );
-      return;
-    }
-
-    this.issueForm.patchValue(
-      {
+    if (type === 'END_ENTITY') {
+      this.issueForm.patchValue({
         ca: false,
         keyCertSign: false,
         digitalSignature: true,
         keyEncipherment: true
-      },
-      { emitEvent: false }
-    );
+      }, { emitEvent: false });
+      
+      caCtrl?.disable();
+      keySignCtrl?.disable();
+    } else {
+      this.issueForm.patchValue({
+        ca: true,
+        keyCertSign: true,
+        digitalSignature: true,
+        keyEncipherment: false
+      }, { emitEvent: false });
+      
+      caCtrl?.disable();
+      keySignCtrl?.disable();
+    }
   }
 
   private applyConditionalValidation(): void {

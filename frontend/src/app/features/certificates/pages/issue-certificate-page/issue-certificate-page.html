@@ -144,7 +144,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label for="validFrom">Valid from</label>
-              <input id="validFrom" type="datetime-local" formControlName="validFrom" />
+              <input id="validFrom" type="datetime-local" formControlName="validFrom" [min]="minDate" />
               @if (hasError('validFrom', 'required')) {
                 <div class="form-error">Valid from is required.</div>
               }
@@ -152,11 +152,17 @@
 
             <div class="form-group">
               <label for="validTo">Valid to</label>
-              <input id="validTo" type="datetime-local" formControlName="validTo" />
+              <input id="validTo" type="datetime-local" formControlName="validTo" [min]="minDate" [max]="issuerMaxDate" />
               @if (hasError('validTo', 'required')) {
                 <div class="form-error">Valid to is required.</div>
               }
+              @if (issuerMaxDate) {
+                <div class="form-hint">Must be before: {{ issuerMaxDate | date:'medium' }}</div>
+              }
             </div>
+            @if (issueForm.hasError('datesInvalid') && submitted) {
+              <div class="form-error">"Valid to" date must be after "Valid from" date.</div>
+            }
           </div>
         </div>
 

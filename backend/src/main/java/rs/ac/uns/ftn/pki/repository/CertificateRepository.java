@@ -24,6 +24,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     @Query("SELECT c FROM Certificate c WHERE (c.organization = :organization OR c.type = 'ROOT') " +
             "AND c.status = 'ACTIVE' " +
+            "AND c.validFrom <= :now " +
             "AND c.validTo > :now " +
             "AND c.ca = true " +
             "AND c.keyCertSign = true " +
