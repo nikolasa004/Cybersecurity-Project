@@ -39,9 +39,13 @@ export const routes: Routes = [
 
   { 
     path: 'ca', 
-    component: CaDashboardPage, 
     canActivate: [authGuard, roleGuard], 
-    data: { roles: ['CA_USER'] } 
+    data: { roles: ['CA_USER'] },
+    children: [
+      { path: '', component: CaDashboardPage },
+      { path: 'certificates', component: AdminCertificatesPage },
+      { path: 'certificates/issue', component: IssueCertificatePage }
+    ]
   },
   { 
     path: 'user', 

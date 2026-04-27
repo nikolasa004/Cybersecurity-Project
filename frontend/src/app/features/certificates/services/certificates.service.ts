@@ -11,19 +11,24 @@ import { IssueCertificateRequest } from '../models/issue-certificate-request.mod
 })
 export class CertificatesService {
   private http = inject(HttpClient);
-  private readonly baseUrl = `${API_BASE_URL}/admin/certificates`;
+  private readonly adminUrl = `${API_BASE_URL}/admin/certificates`;
+  private readonly caUrl = `${API_BASE_URL}/ca/certificates`;
 
-  getAll(): Observable<CertificateListItem[]> {
-    return this.http.get<CertificateListItem[]>(this.baseUrl);
+  getAll(isAdmin: boolean): Observable<CertificateListItem[]> {
+    const url = isAdmin ? this.adminUrl : this.caUrl;
+    return this.http.get<CertificateListItem[]>(url);
   }
 
-  getAvailableIssuers(targetType: 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY'): Observable<IssuerOption[]> {
-    return this.http.get<IssuerOption[]>(`${this.baseUrl}/issuers`, {
-      params: { targetType }
-    });
+  getAvailableIssuers(isAdmin: boolean, targetType?: string): Observable<IssuerOption[]> {
+    const url = isAdmin ? `${this.adminUrl}/issuers` : `${this.caUrl}/issuers`;
+    const params: any = {};
+    if (targetType) params.targetType = targetType;
+    
+    return this.http.get<IssuerOption[]>(url, { params });
   }
 
-  issue(payload: IssueCertificateRequest): Observable<CertificateListItem> {
-    return this.http.post<CertificateListItem>(`${this.baseUrl}/issue`, payload);
+  issue(payload: IssueCertificateRequest, isAdmin: boolean): Observable<CertificateListItem> {
+    const url = isAdmin ? `${this.adminUrl}/issue` : `${this.caUrl}/issue`;
+    return this.http.post<CertificateListItem>(url, payload);
   }
 }

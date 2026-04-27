@@ -1,5 +1,5 @@
 <app-shell
-  sidebarTitle="Admin panel"
+  sidebarTitle="sidebarTitle"
   [navItems]="navItems"
   [fullName]="profile.fullName"
   [roleLabel]="profile.roleLabel"
@@ -9,10 +9,10 @@
     <div class="certificates-page__header">
       <div>
         <h1>Certificates</h1>
-        <p>Review issued certificates and their current status.</p>
+        <p>{{ isAdmin ? 'Review all certificates in the system.' : 'Manage your organization\'s certificates.' }}</p>
       </div>
 
-      <a class="certificates-page__action" routerLink="/admin/certificates/issue">
+      <a class="certificates-page__action" [routerLink]="issueRoute">
         Issue certificate
       </a>
     </div>
@@ -35,7 +35,7 @@
               <div class="certificate-card__top">
                 <div>
                   <h2>{{ certificate.subjectCommonName || 'Unnamed subject' }}</h2>
-                  <p>{{ certificate.subjectOrganization || 'No organization' }}</p>
+                  <p>{{ certificate.organizationName || 'No organization' }}</p>
                 </div>
 
                 <div class="certificate-card__badges">

@@ -35,11 +35,17 @@ public class AuthController {
 
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
+        String orgName = "System Admin";
+        if (user.getOrganization() != null) {
+            orgName = user.getOrganization().getName();
+        }
+
         return ResponseEntity.ok(LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .role(user.getRole().name())
                 .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
+                .organizationName(orgName)
                 .build());
     }
 

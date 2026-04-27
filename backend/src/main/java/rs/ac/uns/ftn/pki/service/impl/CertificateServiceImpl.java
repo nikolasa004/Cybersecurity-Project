@@ -13,11 +13,13 @@ import rs.ac.uns.ftn.pki.mapper.CertificateMapper;
 import rs.ac.uns.ftn.pki.mapper.CertificateSubjectMapper;
 import rs.ac.uns.ftn.pki.model.entity.Certificate;
 import rs.ac.uns.ftn.pki.model.entity.Organization;
+import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.model.entity.X500SubjectData;
 import rs.ac.uns.ftn.pki.model.enums.CertificateStatus;
 import rs.ac.uns.ftn.pki.model.enums.CertificateType;
 import rs.ac.uns.ftn.pki.repository.CertificateRepository;
 import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
+import rs.ac.uns.ftn.pki.service.AuthService;
 import rs.ac.uns.ftn.pki.service.CertificateService;
 import rs.ac.uns.ftn.pki.service.crypto.CertificateEntityFactory;
 import rs.ac.uns.ftn.pki.service.crypto.CertificateKeyMaterialService;
@@ -28,9 +30,11 @@ import rs.ac.uns.ftn.pki.service.crypto.X500NameBuilderService;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -47,6 +51,7 @@ public class CertificateServiceImpl implements CertificateService {
     private final KeyPairGeneratorService keyPairGeneratorService;
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
+    private final AuthService authService;
 
     @Override
     @Transactional(readOnly = true)
@@ -211,7 +216,7 @@ public class CertificateServiceImpl implements CertificateService {
 
     private String toPem(X509Certificate certificate) {
         try {
-            String base64 = java.util.Base64.getMimeEncoder(64, "\n".getBytes())
+            String base64 = Base64.getMimeEncoder(64, "\n".getBytes())
                     .encodeToString(certificate.getEncoded());
 
             return "-----BEGIN CERTIFICATE-----\n"
@@ -220,5 +225,174 @@ public class CertificateServiceImpl implements CertificateService {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to encode certificate to PEM.", e);
         }
+    }
+
+    // FOR CA USER
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<IssuerOptionResponse> getAvailableIssuersForCa() {
+        User currentUser = authService.getLoggedInUser();
+
+        return certificateRepository.findAvailableIssuersForCa(
+                        currentUser.getOrganization(),
+                        LocalDateTime.now()
+                )
+                .stream()
+                .map(certificateMapper::toIssuerOptionResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CertificateListResponse issueCertificateAsCa(IssueCertificateRequest request) {
+        User currentUser = authService.getLoggedInUser();
+
+        Certificate issuer = certificateRepository.findById(request.getIssuerCertificateId())
+                .orElseThrow(() -> new NotFoundException("Issuer not found"));
+
+        validateCertificateForCa(issuer, request, currentUser);
+
+        X500SubjectData subjectData = certificateSubjectMapper.fromIssueRequest(request);
+        X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
+        X500Name issuerX500Name = x500NameBuilderService.build(issuer.getSubjectData());
+
+        KeyPair subjectKeyPair = keyPairGeneratorService.generateRsaKeyPair();
+        PrivateKey issuerPrivateKey = certificateKeyMaterialService.getIssuerPrivateKey(issuer);
+
+        BigInteger serialNumber = generateSerialNumber();
+        X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
+                issuerX500Name,
+                issuerPrivateKey,
+                subjectX500Name,
+                subjectKeyPair.getPublic(),
+                serialNumber,
+                toDate(request.getValidFrom()),
+                toDate(request.getValidTo()),
+                request.isCa(),
+                request.isKeyCertSign(),
+                request.isDigitalSignature(),
+                request.isKeyEncipherment(),
+                "SHA256withRSA"
+        );
+
+        Certificate certificate = certificateEntityFactory.create(
+                request,
+                serialNumber.toString(),
+                subjectData,
+                issuer,
+                currentUser.getOrganization(),
+                toPem(x509Certificate)
+        );
+
+        Certificate saved = certificateRepository.save(certificate);
+
+        certificateKeyMaterialService.rememberPrivateKey(saved.getSerialNumber(), subjectKeyPair.getPrivate());
+
+        return certificateMapper.toListResponse(saved);
+    }
+
+    private void validateCertificateForCa(Certificate issuer, IssueCertificateRequest request, User currentUser) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (request.getValidFrom().isBefore(now.minusMinutes(5))) {
+            throw new BadRequestException("The certificate start date cannot be in the past.");
+        }
+
+        if (!request.getValidTo().isAfter(request.getValidFrom())) {
+            throw new BadRequestException("The expiration date must be after the start date.");
+        }
+
+        if (issuer.getOrganization() != null && !issuer.getOrganization().getId().equals(currentUser.getOrganization().getId())) {
+            throw new BadRequestException("The issuer must belong to your organization or be RootCA.");
+        }
+
+        if (request.getType() == CertificateType.ROOT) {
+            throw new BadRequestException("CA users are not authorized to create Root certificates.");
+        }
+
+        if (issuer.getStatus() != CertificateStatus.ACTIVE) {
+            throw new BadRequestException("The issuer certificate is not active.");
+        }
+
+        if (issuer.getValidTo().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("The issuer certificate has expired.");
+        }
+
+        if (!issuer.isCa()) {
+            throw new BadRequestException("The selected certificate is not a CA.");
+        }
+
+        if (!issuer.isKeyCertSign()) {
+            throw new BadRequestException("The selected certificate does not have permission to sign other certificates.");
+        }
+
+        if (request.getValidTo().isAfter(issuer.getValidTo())) {
+            throw new BadRequestException("The new certificate validity cannot exceed the issuer's validity.");
+        }
+
+        verifyDigitalSignature(issuer);
+        validateExtensions(request);
+    }
+
+    private void validateExtensions(IssueCertificateRequest request) {
+        if (request.getType() == CertificateType.END_ENTITY) {
+            if (request.isCa() || request.isKeyCertSign()) {
+                throw new BadRequestException("End-entity certificates cannot have CA or KeyCertSign capabilities.");
+            }
+        }
+
+        if (request.getType() == CertificateType.INTERMEDIATE || request.getType() == CertificateType.ROOT) {
+            if (!request.isCa() || !request.isKeyCertSign()) {
+                throw new BadRequestException("CA certificates must have CA and KeyCertSign capabilities enabled.");
+            }
+        }
+    }
+
+
+    private void verifyDigitalSignature(Certificate issuer) {
+        try {
+            X509Certificate issuerX509 = convertToX509(issuer.getEncodedCertificate());
+            PublicKey publicKeyToVerifyWith;
+
+            if (issuer.getIssuerCertificate() == null) {
+                publicKeyToVerifyWith = issuerX509.getPublicKey();
+            } else {
+                X509Certificate parentX509 = convertToX509(issuer.getIssuerCertificate().getEncodedCertificate());
+                publicKeyToVerifyWith = parentX509.getPublicKey();
+            }
+
+            issuerX509.verify(publicKeyToVerifyWith);
+
+        } catch (java.security.SignatureException | java.security.InvalidKeyException e) {
+            throw new BadRequestException("Issuer digital signature is invalid.");
+        } catch (Exception e) {
+            throw new BadRequestException("Error verifying digital signature: " + e.getMessage());
+        }
+    }
+
+    private X509Certificate convertToX509(String pemCertificate) {
+        try {
+            byte[] decoded = java.util.Base64.getMimeDecoder().decode(
+                    pemCertificate.replace("-----BEGIN CERTIFICATE-----", "")
+                            .replace("-----END CERTIFICATE-----", "")
+                            .replace("\n", "")
+            );
+            java.security.cert.CertificateFactory factory = java.security.cert.CertificateFactory.getInstance("X.509");
+            return (X509Certificate) factory.generateCertificate(new java.io.ByteArrayInputStream(decoded));
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to convert issuer certificate.");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CertificateListResponse> getAllForCa() {
+        User currentUser = authService.getLoggedInUser();
+
+        return certificateRepository.findAllByOrganizationOrderByCreatedAtDesc(currentUser.getOrganization())
+                .stream()
+                .map(certificateMapper::toListResponse)
+                .toList();
     }
 }

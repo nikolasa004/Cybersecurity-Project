@@ -26,4 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByActivationToken(String activationToken);
 
     Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.organization WHERE u.email = :email")
+    Optional<User> findByEmailWithOrganization(@Param("email") String email);
 }
