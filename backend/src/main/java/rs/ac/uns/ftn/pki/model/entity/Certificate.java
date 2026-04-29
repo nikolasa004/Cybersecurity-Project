@@ -85,6 +85,9 @@ public class Certificate {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @OneToOne(mappedBy = "certificate", cascade = CascadeType.ALL)
+    private PrivateKeyEntity privateKeyEntity;
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
