@@ -17,3 +17,14 @@
   </nav>
 
 </aside>
+
+<app-confirm-dialog
+  [isOpen]="showLogoutDialog"
+  title="Log out"
+  message="Are you sure you want to log out?"
+  confirmText="Yes, log out"
+  cancelText="Cancel"
+  [danger]="true"
+  (confirm)="confirmLogout()"
+  (cancel)="closeLogoutDialog()"
+></app-confirm-dialog>

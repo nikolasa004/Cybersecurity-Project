@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { LandingPage } from './pages/landing-page/landing-page';
 import { AdminDashboardPage } from './pages/admin-dashboard-page/admin-dashboard-page';
 import { CaDashboardPage } from './pages/ca-dashboard-page/ca-dashboard-page';
 import { UserDashboardPage } from './pages/user-dashboard-page/user-dashboard-page';
@@ -14,7 +13,7 @@ import { roleGuard } from './core/guards/role.guard';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', component: LandingPage },
+  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
 
   {
     path: 'auth',
@@ -56,5 +55,5 @@ export const routes: Routes = [
 
   { path: 'activate', component: ActivateAccountPage },
 
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: 'auth/login' }
 ];

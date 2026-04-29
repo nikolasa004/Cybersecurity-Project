@@ -5,6 +5,7 @@ import { AppShell } from '../../../../shared/components/app-shell/app-shell';
 import { NAVIGATION_BY_ROLE } from '../../../../core/config/role-navigation';
 import { Organization } from '../../models/organization.model';
 import { OrganizationsService } from '../../services/organizations.service';
+import { CurrentUserService } from '../../../users/services/current-user.service';
 
 @Component({
   selector: 'app-organizations-page',
@@ -16,13 +17,15 @@ import { OrganizationsService } from '../../services/organizations.service';
 export class OrganizationsPage implements OnInit {
   private fb = inject(FormBuilder);
   private organizationsService = inject(OrganizationsService);
+  private currentUserService = inject(CurrentUserService);
 
   navItems = NAVIGATION_BY_ROLE.ADMIN;
+  sidebarTitle = 'Admin panel';
 
   profile = {
-    fullName: 'Administrator session',
+    fullName: 'Loading...',
     roleLabel: 'Administrator',
-    organization: 'PKI system'
+    organization: 'Loading...'
   };
 
   organizationForm: FormGroup = this.fb.group({
@@ -43,6 +46,7 @@ export class OrganizationsPage implements OnInit {
   organizations: Organization[] = [];
 
   ngOnInit(): void {
+    this.loadCurrentUser();
     this.loadOrganizations();
   }
 
@@ -59,6 +63,21 @@ export class OrganizationsPage implements OnInit {
         this.loadingOrganizations = false;
         this.errorMessage = error?.error?.message || 'Failed to load organizations.';
       }
+    });
+  }
+
+  private loadCurrentUser(): void {
+    this.currentUserService.currentUser$.subscribe((user) => {
+      if (!user) {
+        return;
+      }
+
+      this.sidebarTitle = 'Admin panel';
+      this.profile = {
+        fullName: user.fullName,
+        roleLabel: 'Administrator',
+        organization: user.organizationName || 'System Administration'
+      };
     });
   }
 

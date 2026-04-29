@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
 import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
 import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
-import rs.ac.uns.ftn.pki.model.enums.CertificateType;
 import rs.ac.uns.ftn.pki.service.CertificateService;
 
 import java.util.List;

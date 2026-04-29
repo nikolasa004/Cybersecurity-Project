@@ -7,26 +7,64 @@
 >
   <section class="dashboard-page">
     <div class="dashboard-page__hero">
-      <h1>Welcome, User</h1>
-      <p>
-        You can request certificates, upload CSR files, review your certificates,
-        download available material and revoke certificates when needed.
-      </p>
+      <div class="dashboard-page__hero-content">
+        <span class="dashboard-page__eyebrow">User workspace</span>
+        <h1>Welcome, User</h1>
+        <p>
+          Request certificates, upload CSR files, review your issued certificates
+          and manage certificate actions available to your account.
+        </p>
+      </div>
     </div>
 
     <div class="dashboard-grid">
-      <div class="dashboard-card">
+      <div class="dashboard-card dashboard-card--profile">
         <h2>Profile overview</h2>
-        <p><strong>Name:</strong> {{ profile.fullName }}</p>
-        <p><strong>Role:</strong> {{ profile.roleLabel }}</p>
-        <p><strong>Organization:</strong> {{ profile.organization }}</p>
-        <p><strong>Email:</strong> {{ profile.email }}</p>
+        <div class="dashboard-info-list">
+          <div class="dashboard-info-row">
+            <span class="dashboard-info-label">Name</span>
+            <span class="dashboard-info-value">{{ profile.fullName }}</span>
+          </div>
+          <div class="dashboard-info-row">
+            <span class="dashboard-info-label">Role</span>
+            <span class="dashboard-info-value">{{ profile.roleLabel }}</span>
+          </div>
+          <div class="dashboard-info-row">
+            <span class="dashboard-info-label">Organization</span>
+            <span class="dashboard-info-value">{{ profile.organization }}</span>
+          </div>
+          <div class="dashboard-info-row">
+            <span class="dashboard-info-label">Email</span>
+            <span class="dashboard-info-value">{{ profile.email }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="dashboard-card">
-        <h2>Quick summary</h2>
-        <p>This is the initial user home screen.</p>
-        <p>Sidebar options are prepared for final user functionality.</p>
+        <h2>Certificate request options</h2>
+        <ul class="dashboard-list">
+          @for (item of requestOptions; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </div>
+
+      <div class="dashboard-card">
+        <h2>Certificate access</h2>
+        <ul class="dashboard-list">
+          @for (item of certificateActions; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </div>
+
+      <div class="dashboard-card">
+        <h2>Security notes</h2>
+        <ul class="dashboard-list">
+          @for (item of securityNotes; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
       </div>
     </div>
   </section>

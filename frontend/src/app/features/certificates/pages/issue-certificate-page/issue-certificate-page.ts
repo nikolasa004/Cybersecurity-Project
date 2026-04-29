@@ -9,6 +9,7 @@ import { IssuerOption } from '../../models/issuer-option.model';
 import { OrganizationsService } from '../../../organizations/services/organizations.service';
 import { Organization } from '../../../organizations/models/organization.model';
 import { AuthService } from '../../../auth/services/auth.service';
+import { CurrentUserService } from '../../../users/services/current-user.service';
 
 @Component({
   selector: 'app-issue-certificate-page',
@@ -23,14 +24,15 @@ export class IssueCertificatePage implements OnInit {
   private certificatesService = inject(CertificatesService);
   private organizationsService = inject(OrganizationsService);
   private authService = inject(AuthService);
+  private currentUserService = inject(CurrentUserService);
 
   isAdmin = this.authService.getRole() === 'ADMIN';
   navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
 
   profile = {
-    fullName: this.isAdmin ? 'Administrator session' : 'CA User session',
-    roleLabel: this.isAdmin ? 'Administrator' : 'CA Representative',
-    organization: this.isAdmin ? 'PKI system' : this.authService.getUserOrganizationName() || 'Unknown Organization'
+    fullName: 'Loading...',
+    roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+    organization: 'Loading...'
   };
 
   sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
@@ -80,6 +82,7 @@ export class IssueCertificatePage implements OnInit {
 
   ngOnInit(): void {
     this.applyTypeDefaults(this.issueForm.value.type);
+    this.loadCurrentUser();
     if (this.isAdmin) {
       this.loadOrganizations();
     } else {
@@ -113,6 +116,21 @@ export class IssueCertificatePage implements OnInit {
         this.issueForm.patchValue({ validTo: '' });
       }
     }
+  }
+
+  private loadCurrentUser(): void {
+    this.currentUserService.currentUser$.subscribe((user) => {
+      if (!user) {
+        return;
+      }
+
+      this.sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
+      this.profile = {
+        fullName: user.fullName,
+        roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+        organization: user.organizationName || (this.isAdmin ? 'System Administration' : 'No organization')
+      };
+    });
   }
 
   private formatDateForInput(dateInput: string | Date): string {

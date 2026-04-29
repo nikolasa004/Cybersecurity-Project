@@ -3,11 +3,12 @@ import { Component, inject, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NavigationItem } from '../../../core/models/navigation-item';
 import { AuthService } from '../../../features/auth/services/auth.service';
+import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 
 @Component({
   selector: 'app-sidebar-nav',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ConfirmDialog],
   templateUrl: './sidebar-nav.html',
   styleUrl: './sidebar-nav.css'
 })
@@ -17,7 +18,18 @@ export class SidebarNav {
 
   authService = inject(AuthService);
 
-  onLogout() {
+  showLogoutDialog = false;
+
+  onLogout(): void {
+    this.showLogoutDialog = true;
+  }
+
+  confirmLogout(): void {
+    this.showLogoutDialog = false;
     this.authService.logout();
+  }
+
+  closeLogoutDialog(): void {
+    this.showLogoutDialog = false;
   }
 }
