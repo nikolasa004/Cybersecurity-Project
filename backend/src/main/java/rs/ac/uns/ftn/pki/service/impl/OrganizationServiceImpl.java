@@ -9,7 +9,9 @@ import rs.ac.uns.ftn.pki.mapper.OrganizationMapper;
 import rs.ac.uns.ftn.pki.model.entity.Organization;
 import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
 import rs.ac.uns.ftn.pki.service.OrganizationService;
+import rs.ac.uns.ftn.pki.service.crypto.KeyEncryptionService;
 
+import javax.crypto.SecretKey;
 import java.util.List;
 
 @Service
@@ -18,6 +20,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMapper organizationMapper;
+    private final KeyEncryptionService keyEncryptionService;
 
     @Override
     public OrganizationResponse create(CreateOrganizationRequest request) {
@@ -30,6 +33,15 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
 
         Organization organization = organizationMapper.toEntity(request);
+
+        SecretKey orgKey = keyEncryptionService.generateOrgKey();
+
+        byte[] encryptedOrgKey = keyEncryptionService.encrypt(
+                orgKey.getEncoded(),
+                keyEncryptionService.getMasterKey()
+        );
+
+        organization.setEncryptedOrgKey(encryptedOrgKey);
         Organization saved = organizationRepository.save(organization);
 
         return organizationMapper.toResponse(saved);

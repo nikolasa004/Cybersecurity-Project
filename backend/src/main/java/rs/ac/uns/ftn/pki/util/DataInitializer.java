@@ -11,10 +11,7 @@ import rs.ac.uns.ftn.pki.model.enums.UserRole;
 import rs.ac.uns.ftn.pki.repository.CertificateRepository;
 import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
 import rs.ac.uns.ftn.pki.repository.UserRepository;
-import rs.ac.uns.ftn.pki.service.crypto.CertificateGeneratorService;
-import rs.ac.uns.ftn.pki.service.crypto.CertificateKeyMaterialService;
-import rs.ac.uns.ftn.pki.service.crypto.KeyPairGeneratorService;
-import rs.ac.uns.ftn.pki.service.crypto.X500NameBuilderService;
+import rs.ac.uns.ftn.pki.service.crypto.*;
 
 @Component
 @RequiredArgsConstructor
@@ -30,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
     private final CertificateKeyMaterialService certificateKeyMaterialService;
+    private final KeyEncryptionService keyEncryptionService;
 
     @Override
     @Transactional
@@ -119,6 +117,15 @@ public class DataInitializer implements CommandLineRunner {
         org.setCity(city);
         org.setCountry(country);
         org.setEmailDomain(domain);
+        javax.crypto.SecretKey orgKey = keyEncryptionService.generateOrgKey();
+
+        byte[] encryptedOrgKey = keyEncryptionService.encrypt(
+                orgKey.getEncoded(),
+                keyEncryptionService.getMasterKey()
+        );
+
+        org.setEncryptedOrgKey(encryptedOrgKey);
+
         return organizationRepository.save(org);
     }
 
