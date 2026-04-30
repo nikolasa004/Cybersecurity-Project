@@ -108,7 +108,7 @@
               } @else if (isAdmin) {
                 <select id="organizationId" formControlName="organizationId">
                   <option [ngValue]="null">Select organization</option>
-                  @for (org of organizations; track org.id) {
+                  @for (org of selectableOrganizations; track org.id) {
                     <option [ngValue]="org.id">{{ org.name }}</option>
                   }
                 </select>

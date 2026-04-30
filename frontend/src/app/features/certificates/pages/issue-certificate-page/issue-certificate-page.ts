@@ -80,6 +80,10 @@ export class IssueCertificatePage implements OnInit {
   issuers: IssuerOption[] = [];
   organizations: Organization[] = [];
 
+  get selectableOrganizations(): Organization[] {
+    return this.organizations.filter(org => org.id !== 1);
+  }
+
   issuerMaxDate: string | null = null;
 
   ngOnInit(): void {

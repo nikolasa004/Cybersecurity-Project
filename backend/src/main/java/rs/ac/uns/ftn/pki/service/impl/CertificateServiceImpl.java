@@ -220,6 +220,10 @@ public class CertificateServiceImpl implements CertificateService {
         if (request.getType() == CertificateType.ROOT) {
             return;
         }
+        
+        if (request.getValidFrom().isBefore(issuer.getValidFrom())) {
+            throw new BadRequestException("Issued certificate cannot start before its issuer.");
+        }
 
         if (issuer.getStatus() != CertificateStatus.ACTIVE) {
             throw new BadRequestException("Issuer certificate is not active.");
@@ -391,6 +395,10 @@ public class CertificateServiceImpl implements CertificateService {
 
         if (request.getValidFrom().isBefore(now.minusMinutes(5))) {
             throw new BadRequestException("The certificate start date cannot be in the past.");
+        }
+        
+        if (request.getValidFrom().isBefore(issuer.getValidFrom())) {
+            throw new BadRequestException("The new certificate cannot start before the issuer's validity starts.");
         }
 
         if (!request.getValidTo().isAfter(request.getValidFrom())) {
