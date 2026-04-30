@@ -1,24 +1,32 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, switchMap, map, tap } from 'rxjs';
 import { LoginResponse, TokenRefreshResponse } from '../models/auth.model';
 import { Router } from '@angular/router';
+import { CurrentUserService } from '../../users/services/current-user.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private readonly AUTH_URL = 'http://localhost:8081/api/auth';
-  
+
   private userSubject = new BehaviorSubject<any>(null);
 
-  constructor(private http: HttpClient, private router: Router) {}
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private currentUserService = inject(CurrentUserService);
 
   login(credentials: any): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.AUTH_URL}/login`, credentials).pipe(
       tap(response => {
         this.storeTokens(response);
-      })
+      }),
+      switchMap((response) =>
+        this.currentUserService.load(true).pipe(
+          map(() => response)
+        )
+      )
     );
   }
 
@@ -45,6 +53,7 @@ export class AuthService {
   finalizeLogout(): void {
     localStorage.clear();
     this.userSubject.next(null);
+    this.currentUserService.clear();
     this.router.navigate(['/auth/login']);
   }
 
@@ -52,6 +61,7 @@ export class AuthService {
     localStorage.setItem('accessToken', response.accessToken);
     localStorage.setItem('refreshToken', response.refreshToken);
     localStorage.setItem('role', response.role);
+
     if (response.organizationId) {
       localStorage.setItem('organizationId', response.organizationId.toString());
       localStorage.setItem('organizationName', response.organizationName || 'System Admin');

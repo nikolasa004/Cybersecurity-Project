@@ -6,6 +6,7 @@ import { NAVIGATION_BY_ROLE } from '../../../../core/config/role-navigation';
 import { CertificatesService } from '../../services/certificates.service';
 import { CertificateListItem } from '../../models/certificate-list.model';
 import { AuthService } from '../../../auth/services/auth.service';
+import { CurrentUserService } from '../../../users/services/current-user.service';
 
 @Component({
   selector: 'app-admin-certificates-page',
@@ -17,14 +18,15 @@ import { AuthService } from '../../../auth/services/auth.service';
 export class AdminCertificatesPage implements OnInit {
   private certificatesService = inject(CertificatesService);
   private authService = inject(AuthService);
+  private currentUserService = inject(CurrentUserService);
 
   isAdmin = this.authService.getRole() === 'ADMIN';
   navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
 
   profile = {
-    fullName: this.isAdmin ? 'Administrator session' : 'CA User session',
-    roleLabel: this.isAdmin ? 'Administrator' : 'CA Representative',
-    organization: this.isAdmin ? 'PKI system' : this.authService.getUserOrganizationName() || 'Unknown Organization'
+    fullName: 'Loading...',
+    roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+    organization: 'Loading...'
   };
 
   issueRoute = this.isAdmin ? '/admin/certificates/issue' : '/ca/certificates/issue';
@@ -36,6 +38,7 @@ export class AdminCertificatesPage implements OnInit {
 
   ngOnInit(): void {
     this.loadCertificates();
+    this.loadCurrentUser();
   }
 
   loadCertificates(): void {
@@ -51,6 +54,21 @@ export class AdminCertificatesPage implements OnInit {
         this.loading = false;
         this.errorMessage = error?.error?.message || 'Failed to load certificates.';
       }
+    });
+  }
+
+  private loadCurrentUser(): void {
+    this.currentUserService.currentUser$.subscribe((user) => {
+      if (!user) {
+        return;
+      }
+
+      this.sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
+      this.profile = {
+        fullName: user.fullName,
+        roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+        organization: user.organizationName || (this.isAdmin ? 'System Administration' : 'No organization')
+      };
     });
   }
 

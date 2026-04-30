@@ -1,7 +1,6 @@
 package rs.ac.uns.ftn.pki.model.entity;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,8 +37,7 @@ public class Organization {
     @Column(nullable = false)
     private String emailDomain;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(name = "encrypted_org_key", nullable = false)
     private byte[] encryptedOrgKey;
 
 }

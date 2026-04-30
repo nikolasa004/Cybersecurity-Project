@@ -16,7 +16,6 @@ public class CertificateSubjectMapper {
         data.setOrganization(request.getOrganization());
         data.setOrganizationalUnit(request.getOrganizationalUnit());
         data.setEmail(request.getEmail());
-        data.setSerialNumber(request.getSubjectSerialNumber());
         return data;
     }
 }

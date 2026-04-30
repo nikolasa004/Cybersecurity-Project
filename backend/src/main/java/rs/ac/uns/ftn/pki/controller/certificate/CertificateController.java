@@ -2,6 +2,7 @@ package rs.ac.uns.ftn.pki.controller.certificate;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ public class CertificateController {
 
     private final CertificateService certificateService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<CertificateListResponse>> getAll() {
         return ResponseEntity.ok(certificateService.getAllForAdmin());

@@ -45,6 +45,9 @@ public class Certificate {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id")
     private Organization organization;
+    
+    @Column(length = 255)
+    private String subjectAlternativeName;
 
     @Column(nullable = false)
     private boolean ca;

@@ -9,6 +9,7 @@ import { IssuerOption } from '../../models/issuer-option.model';
 import { OrganizationsService } from '../../../organizations/services/organizations.service';
 import { Organization } from '../../../organizations/models/organization.model';
 import { AuthService } from '../../../auth/services/auth.service';
+import { CurrentUserService } from '../../../users/services/current-user.service';
 
 @Component({
   selector: 'app-issue-certificate-page',
@@ -23,46 +24,49 @@ export class IssueCertificatePage implements OnInit {
   private certificatesService = inject(CertificatesService);
   private organizationsService = inject(OrganizationsService);
   private authService = inject(AuthService);
+  private currentUserService = inject(CurrentUserService);
 
   isAdmin = this.authService.getRole() === 'ADMIN';
   navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
 
   profile = {
-    fullName: this.isAdmin ? 'Administrator session' : 'CA User session',
-    roleLabel: this.isAdmin ? 'Administrator' : 'CA Representative',
-    organization: this.isAdmin ? 'PKI system' : this.authService.getUserOrganizationName() || 'Unknown Organization'
+    fullName: 'Loading...',
+    roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+    organization: 'Loading...'
   };
 
   sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
 
   minDate: string = this.formatDateForInput(new Date());
+  systemOrganizationId: number | null = this.authService.getUserOrganizationId();
 
   issueForm: FormGroup = this.fb.group({
     type: [this.isAdmin ? 'ROOT' : 'INTERMEDIATE', [Validators.required]],
-    issuerCertificateId: [''],
-    organizationId: [''],
+    issuerCertificateId: [null],
+    organizationId: [this.isAdmin ? this.systemOrganizationId : this.authService.getUserOrganizationId()],
     commonName: ['', [Validators.required, Validators.minLength(2)]],
     country: ['RS', [Validators.required, Validators.minLength(2), Validators.maxLength(2)]],
     state: [''],
     locality: [''],
     organizationalUnit: [''],
     email: ['', [Validators.email]],
-    subjectSerialNumber: [''],
+    subjectAlternativeName: [''],
     validFrom: ['', [Validators.required]],
     validTo: ['', [Validators.required]],
     ca: [true],
     keyCertSign: [true],
     digitalSignature: [true],
     keyEncipherment: [false]
-  }, { validators: this.dateComparisonValidator});
+  }, { validators: this.dateComparisonValidator });
 
   private dateComparisonValidator(group: FormGroup): any {
     const from = group.get('validFrom')?.value;
     const to = group.get('validTo')?.value;
-    
+
     if (from && to && new Date(from) >= new Date(to)) {
       return { datesInvalid: true };
     }
+
     return null;
   }
 
@@ -76,25 +80,57 @@ export class IssueCertificatePage implements OnInit {
   issuers: IssuerOption[] = [];
   organizations: Organization[] = [];
 
+  get selectableOrganizations(): Organization[] {
+    return this.organizations.filter(org => org.id !== 1);
+  }
+
   issuerMaxDate: string | null = null;
 
   ngOnInit(): void {
     this.applyTypeDefaults(this.issueForm.value.type);
+    this.applyConditionalValidation();
+    this.loadCurrentUser();
+
     if (this.isAdmin) {
       this.loadOrganizations();
     } else {
-      this.issueForm.patchValue({ organizationId: this.authService.getUserOrganizationId() });
+      this.issueForm.patchValue({
+        organizationId: this.authService.getUserOrganizationId()
+      });
     }
+
+    this.applyOrganizationDefaultForType(this.issueForm.value.type);
     this.loadIssuersForType(this.issueForm.value.type);
 
     this.issueForm.get('type')?.valueChanges.subscribe((type) => {
       this.applyTypeDefaults(type);
+      this.applyConditionalValidation();
+      this.applyOrganizationDefaultForType(type);
       this.loadIssuersForType(type);
     });
 
     this.issueForm.get('issuerCertificateId')?.valueChanges.subscribe((id) => {
       this.updateMaxDate(id);
     });
+  }
+
+  private applyOrganizationDefaultForType(type: 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY'): void {
+    const organizationControl = this.issueForm.get('organizationId');
+
+    if (!organizationControl) {
+      return;
+    }
+
+    if (!this.isAdmin) {
+      organizationControl.setValue(this.authService.getUserOrganizationId(), { emitEvent: false });
+      return;
+    }
+
+    if (type === 'ROOT') {
+      organizationControl.setValue(this.systemOrganizationId, { emitEvent: false });
+    } else if (organizationControl.value === this.systemOrganizationId) {
+      organizationControl.setValue(null, { emitEvent: false });
+    }
   }
 
   private updateMaxDate(issuerId: string | number): void {
@@ -104,15 +140,30 @@ export class IssueCertificatePage implements OnInit {
     }
 
     const selectedIssuer = this.issuers.find(i => i.id === Number(issuerId));
-    
+
     if (selectedIssuer && selectedIssuer.validTo) {
       this.issuerMaxDate = this.formatDateForInput(selectedIssuer.validTo);
-      
+
       const currentValidTo = this.issueForm.get('validTo')?.value;
       if (currentValidTo && currentValidTo > this.issuerMaxDate) {
         this.issueForm.patchValue({ validTo: '' });
       }
     }
+  }
+
+  private loadCurrentUser(): void {
+    this.currentUserService.currentUser$.subscribe((user) => {
+      if (!user) {
+        return;
+      }
+
+      this.sidebarTitle = this.isAdmin ? 'Admin panel' : 'CA panel';
+      this.profile = {
+        fullName: user.fullName,
+        roleLabel: this.isAdmin ? 'Administrator' : 'CA User',
+        organization: user.organizationName || (this.isAdmin ? 'System Administration' : 'No organization')
+      };
+    });
   }
 
   private formatDateForInput(dateInput: string | Date): string {
@@ -125,12 +176,17 @@ export class IssueCertificatePage implements OnInit {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
+  private toLocalDateTimeString(value: string): string {
+    return `${value}:00`;
+  }
+
   onSubmit(): void {
     this.submitted = true;
     this.errorMessage = '';
     this.successMessage = '';
 
     this.applyConditionalValidation();
+    this.applyOrganizationDefaultForType(this.issueForm.value.type);
 
     if (this.issueForm.invalid) {
       this.issueForm.markAllAsTouched();
@@ -141,10 +197,20 @@ export class IssueCertificatePage implements OnInit {
 
     const payload = {
       ...formValue,
-      issuerCertificateId: formValue.type === 'ROOT' ? null : Number(formValue.issuerCertificateId),
-      organizationId: Number(formValue.organizationId),
-      validFrom: new Date(formValue.validFrom).toISOString(),
-      validTo: new Date(formValue.validTo).toISOString(),
+      issuerCertificateId:
+        formValue.type === 'ROOT' || formValue.issuerCertificateId == null
+          ? null
+          : Number(formValue.issuerCertificateId),
+
+      organizationId:
+        formValue.type === 'ROOT'
+          ? this.systemOrganizationId
+          : formValue.organizationId == null
+            ? null
+            : Number(formValue.organizationId),
+
+      validFrom: this.toLocalDateTimeString(formValue.validFrom),
+      validTo: this.toLocalDateTimeString(formValue.validTo),
       ca: !!formValue.ca,
       keyCertSign: !!formValue.keyCertSign,
       digitalSignature: !!formValue.digitalSignature,
@@ -168,13 +234,18 @@ export class IssueCertificatePage implements OnInit {
 
   private resetForm(): void {
     const defaultType = this.isAdmin ? 'ROOT' : 'INTERMEDIATE';
+
     this.issueForm.reset({
       type: defaultType,
       country: 'RS',
-      organizationId: this.isAdmin ? '' : this.authService.getUserOrganizationId()
+      issuerCertificateId: null,
+      organizationId: this.isAdmin ? this.systemOrganizationId : this.authService.getUserOrganizationId()
     });
+
     this.submitted = false;
     this.applyTypeDefaults(defaultType);
+    this.applyConditionalValidation();
+    this.applyOrganizationDefaultForType(defaultType);
     this.loadIssuersForType(defaultType);
   }
 
@@ -190,6 +261,7 @@ export class IssueCertificatePage implements OnInit {
 
   private loadOrganizations(): void {
     this.loadingOrganizations = true;
+
     this.organizationsService.getAll().subscribe({
       next: (orgs) => {
         this.organizations = orgs;
@@ -201,9 +273,12 @@ export class IssueCertificatePage implements OnInit {
   private loadIssuersForType(type: string): void {
     if (type === 'ROOT') {
       this.issuers = [];
+      this.issuerMaxDate = null;
       return;
     }
+
     this.loadingIssuers = true;
+
     this.certificatesService.getAvailableIssuers(this.isAdmin, type).subscribe({
       next: (issuers) => {
         this.issuers = issuers;
@@ -227,7 +302,7 @@ export class IssueCertificatePage implements OnInit {
         digitalSignature: true,
         keyEncipherment: true
       }, { emitEvent: false });
-      
+
       caCtrl?.disable();
       keySignCtrl?.disable();
     } else {
@@ -237,7 +312,7 @@ export class IssueCertificatePage implements OnInit {
         digitalSignature: true,
         keyEncipherment: false
       }, { emitEvent: false });
-      
+
       caCtrl?.disable();
       keySignCtrl?.disable();
     }
@@ -245,27 +320,25 @@ export class IssueCertificatePage implements OnInit {
 
   private applyConditionalValidation(): void {
     const issuerControl = this.issueForm.get('issuerCertificateId');
+    const organizationControl = this.issueForm.get('organizationId');
+    const type = this.issueForm.value.type;
 
-    if (this.issueForm.value.type === 'ROOT') {
+    if (type === 'ROOT') {
       issuerControl?.clearValidators();
-      issuerControl?.setValue('', { emitEvent: false });
+      issuerControl?.setValue(null, { emitEvent: false });
+
+      if (this.isAdmin) {
+        organizationControl?.clearValidators();
+      }
     } else {
       issuerControl?.setValidators([Validators.required]);
+
+      if (this.isAdmin) {
+        organizationControl?.setValidators([Validators.required]);
+      }
     }
 
     issuerControl?.updateValueAndValidity({ emitEvent: false });
-  }
-
-  private normalizeOptional(value: string | null | undefined): string | null {
-    if (value == null) {
-      return null;
-    }
-
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
-
-  private toIsoDateTime(value: string): string {
-    return new Date(value).toISOString();
+    organizationControl?.updateValueAndValidity({ emitEvent: false });
   }
 }

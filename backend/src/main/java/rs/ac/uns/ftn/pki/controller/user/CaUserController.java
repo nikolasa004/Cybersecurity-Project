@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import rs.ac.uns.ftn.pki.dto.user.CaUserResponse;
 import rs.ac.uns.ftn.pki.dto.user.CreateCaUserRequest;
@@ -16,15 +17,18 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/ca-users")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class CaUserController {
 
     private final CaUserService caUserService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<CaUserResponse> create(@Valid @RequestBody CreateCaUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(caUserService.create(request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<CaUserResponse>> getAll() {
         return ResponseEntity.ok(caUserService.getAllCaUsers());

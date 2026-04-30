@@ -1,20 +1,41 @@
 .dashboard-page__hero {
-  background: var(--color-surface);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 0%,
+    var(--color-surface-muted) 100%
+  );
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-lg);
-  padding: var(--space-xl);
+  padding: var(--space-2xl);
   margin-bottom: var(--space-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-page__hero-content {
+  max-width: 760px;
+}
+
+.dashboard-page__eyebrow {
+  display: inline-block;
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .dashboard-page__hero h1 {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font-size: 2rem;
+  line-height: 1.2;
 }
 
 .dashboard-page__hero p {
-  margin: var(--space-sm) 0 0;
+  margin: var(--space-md) 0 0;
   color: var(--color-text-muted);
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 760px;
 }
 
 .dashboard-grid {
@@ -28,14 +49,77 @@
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
+  box-shadow: var(--shadow-sm);
 }
 
 .dashboard-card h2 {
-  margin-top: 0;
+  margin: 0 0 var(--space-lg);
+  font-size: 1.15rem;
+}
+
+.dashboard-card--profile {
+  background: var(--color-surface);
+}
+
+.dashboard-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.dashboard-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.dashboard-info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dashboard-info-label {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.dashboard-info-value {
+  color: var(--color-text);
+  text-align: right;
+  word-break: break-word;
+}
+
+.dashboard-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text);
+}
+
+.dashboard-list li {
+  line-height: 1.7;
+}
+
+.dashboard-list li + li {
+  margin-top: 0.45rem;
 }
 
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-page__hero {
+    padding: var(--space-xl);
+  }
+
+  .dashboard-info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .dashboard-info-value {
+    text-align: left;
   }
 }

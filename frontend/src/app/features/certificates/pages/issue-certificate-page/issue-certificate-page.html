@@ -1,5 +1,5 @@
 <app-shell
-  sidebarTitle="Admin panel"
+  [sidebarTitle]="sidebarTitle"
   [navItems]="navItems"
   [fullName]="profile.fullName"
   [roleLabel]="profile.roleLabel"
@@ -98,14 +98,18 @@
               <label for="locality">Locality (L)</label>
               <input id="locality" type="text" formControlName="locality" placeholder="Enter locality" />
             </div>
-            
+
             <div class="form-group">
               <label for="organizationId">Organization (O)</label>
-              @if (isAdmin) {
+
+              @if (isAdmin && issueForm.value.type === 'ROOT') {
+                <input type="text" [value]="profile.organization" disabled />
+                <input type="hidden" formControlName="organizationId" />
+              } @else if (isAdmin) {
                 <select id="organizationId" formControlName="organizationId">
-                  <option value="">Select organization</option>
-                  @for (org of organizations; track org.id) {
-                    <option [value]="org.id">{{ org.name }}</option>
+                  <option [ngValue]="null">Select organization</option>
+                  @for (org of selectableOrganizations; track org.id) {
+                    <option [ngValue]="org.id">{{ org.name }}</option>
                   }
                 </select>
               } @else {
@@ -113,8 +117,12 @@
                 <input type="hidden" formControlName="organizationId" />
               }
 
-              @if (loadingOrganizations) {
+              @if (loadingOrganizations && isAdmin && issueForm.value.type !== 'ROOT') {
                 <div class="form-hint">Loading organizations...</div>
+              }
+
+              @if (hasError('organizationId', 'required')) {
+                <div class="form-error">Organization is required for non-root certificates.</div>
               }
             </div>
 
@@ -132,8 +140,8 @@
             </div>
 
             <div class="form-group">
-              <label for="subjectSerialNumber">Subject serial number</label>
-              <input id="subjectSerialNumber" type="text" formControlName="subjectSerialNumber" placeholder="Enter subject serial number" />
+              <label for="subjectAlternativeName">Subject Alternative Name</label>
+              <input id="subjectAlternativeName" type="text" formControlName="subjectAlternativeName" placeholder="example.com" />
             </div>
           </div>
         </div>
@@ -160,6 +168,7 @@
                 <div class="form-hint">Must be before: {{ issuerMaxDate | date:'medium' }}</div>
               }
             </div>
+
             @if (issueForm.hasError('datesInvalid') && submitted) {
               <div class="form-error">"Valid to" date must be after "Valid from" date.</div>
             }

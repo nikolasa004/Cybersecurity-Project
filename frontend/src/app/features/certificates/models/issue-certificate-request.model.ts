@@ -9,7 +9,7 @@ export interface IssueCertificateRequest {
   organization?: string | null;
   organizationalUnit?: string | null;
   email?: string | null;
-  subjectSerialNumber?: string | null;
+  subjectAlternativeName: string | null;
   validFrom: string;
   validTo: string;
   ca: boolean;
