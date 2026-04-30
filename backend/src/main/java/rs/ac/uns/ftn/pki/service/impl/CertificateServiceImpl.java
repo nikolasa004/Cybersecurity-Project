@@ -49,7 +49,6 @@ public class CertificateServiceImpl implements CertificateService {
     private final CertificateMapper certificateMapper;
     private final CertificateSubjectMapper certificateSubjectMapper;
     private final CertificateEntityFactory certificateEntityFactory;
-    private final CertificateKeyMaterialService certificateKeyMaterialService;
     private final KeyPairGeneratorService keyPairGeneratorService;
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
@@ -149,6 +148,7 @@ public class CertificateServiceImpl implements CertificateService {
                 request.isKeyCertSign(),
                 request.isDigitalSignature(),
                 request.isKeyEncipherment(),
+                request.getSubjectAlternativeName(),
                 "SHA256withRSA"
         );
 
@@ -169,6 +169,7 @@ public class CertificateServiceImpl implements CertificateService {
                 organization,
                 toPem(x509Certificate)
         );
+        certificate.setSubjectAlternativeName(request.getSubjectAlternativeName());
 
         Certificate saved = certificateRepository.save(certificate);
 
@@ -345,6 +346,7 @@ public class CertificateServiceImpl implements CertificateService {
                 request.isKeyCertSign(),
                 request.isDigitalSignature(),
                 request.isKeyEncipherment(),
+                request.getSubjectAlternativeName(),
                 "SHA256withRSA"
         );
 
@@ -356,6 +358,7 @@ public class CertificateServiceImpl implements CertificateService {
                 currentUser.getOrganization(),
                 toPem(x509Certificate)
         );
+        certificate.setSubjectAlternativeName(request.getSubjectAlternativeName());
 
         Certificate saved = certificateRepository.save(certificate);
 
@@ -394,7 +397,7 @@ public class CertificateServiceImpl implements CertificateService {
             throw new BadRequestException("The expiration date must be after the start date.");
         }
 
-        if (issuer.getOrganization() != null && !issuer.getOrganization().getId().equals(currentUser.getOrganization().getId())) {
+        if (issuer.getOrganization() != null && !issuer.getOrganization().getId().equals(currentUser.getOrganization().getId()) && !issuer.getOrganization().getId().equals(1L)) {
             throw new BadRequestException("The issuer must belong to your organization or be RootCA.");
         }
 

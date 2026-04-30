@@ -1,6 +1,8 @@
 package rs.ac.uns.ftn.pki.security;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -13,8 +15,7 @@ public class UserDetailsServiceCustom implements UserDetailsService {
     private final UserRepository userRepository;
 
     @Override
-    public org.springframework.security.core.userdetails.UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return userRepository.findByEmailWithOrganization(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
     }

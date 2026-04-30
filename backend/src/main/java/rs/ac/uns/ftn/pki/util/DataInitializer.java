@@ -1,17 +1,36 @@
 package rs.ac.uns.ftn.pki.util;
 
 import lombok.RequiredArgsConstructor;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import rs.ac.uns.ftn.pki.model.entity.Certificate;
 import rs.ac.uns.ftn.pki.model.entity.Organization;
+import rs.ac.uns.ftn.pki.model.entity.PrivateKeyEntity;
 import rs.ac.uns.ftn.pki.model.entity.User;
+import rs.ac.uns.ftn.pki.model.entity.X500SubjectData;
+import rs.ac.uns.ftn.pki.model.enums.CertificateStatus;
+import rs.ac.uns.ftn.pki.model.enums.CertificateType;
 import rs.ac.uns.ftn.pki.model.enums.UserRole;
 import rs.ac.uns.ftn.pki.repository.CertificateRepository;
 import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
+import rs.ac.uns.ftn.pki.repository.PrivateKeyRepository;
 import rs.ac.uns.ftn.pki.repository.UserRepository;
-import rs.ac.uns.ftn.pki.service.crypto.*;
+import rs.ac.uns.ftn.pki.service.crypto.CertificateGeneratorService;
+import rs.ac.uns.ftn.pki.service.crypto.KeyEncryptionService;
+import rs.ac.uns.ftn.pki.service.crypto.KeyPairGeneratorService;
+import rs.ac.uns.ftn.pki.service.crypto.X500NameBuilderService;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -19,118 +38,82 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    // Novi servisi potrebni za Root
     private final CertificateRepository certificateRepository;
+    private final PrivateKeyRepository privateKeyRepository;
+    private final PasswordEncoder passwordEncoder;
     private final KeyPairGeneratorService keyPairGeneratorService;
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
-    private final CertificateKeyMaterialService certificateKeyMaterialService;
     private final KeyEncryptionService keyEncryptionService;
 
     @Override
     @Transactional
     public void run(String... args) {
-        if (userRepository.count() > 0) return;
+        if (userRepository.count() > 0) {
+            return;
+        }
 
-        // Prosleđujemo sve potrebne podatke pomoćnoj metodi
+        Organization systemOrganization = createOrganization(
+                "PKI System",
+                "00000000",
+                "Bulevar oslobodjenja 1",
+                "Novi Sad",
+                "Srbija",
+                "pki.com"
+        );
+
         Organization ftn = createOrganization(
-                "FTN Novi Sad", "12345678", "Trg Dositeja Obradovića 6",
-                "Novi Sad", "Srbija", "ftn.uns.ac.rs"
+                "FTN Novi Sad",
+                "12345678",
+                "Trg Dositeja Obradovića 6",
+                "Novi Sad",
+                "Srbija",
+                "ftn.uns.ac.rs"
         );
 
         Organization nextesy = createOrganization(
-                "Nextesy Software", "87654321", "Industrijska zona",
-                "Šabac", "Srbija", "nextesy.com"
+                "Nextesy Software",
+                "87654321",
+                "Industrijska zona",
+                "Šabac",
+                "Srbija",
+                "nextesy.com"
         );
 
-        createUsers(ftn, nextesy);
-        generateSystemRoot();
+        createUsers(systemOrganization, ftn, nextesy);
+        generateSystemRoot(systemOrganization);
 
-        System.out.println(">> PKI Test data and System Root CA successfully initialized!");
+        System.out.println(">> PKI test data and System Root CA successfully initialized.");
     }
 
-    private void generateSystemRoot() {
-        // Kreiranje podataka za Subject
-        rs.ac.uns.ftn.pki.model.entity.X500SubjectData subjectData = new rs.ac.uns.ftn.pki.model.entity.X500SubjectData();
-        subjectData.setCommonName("PKI System Root CA");
-        subjectData.setOrganization("PKI Root Authority");
-        subjectData.setCountry("RS");
-        subjectData.setEmail("admin@pki.com");
+    private Organization createOrganization(
+            String name,
+            String registrationNumber,
+            String address,
+            String city,
+            String country,
+            String emailDomain
+    ) {
+        Organization organization = new Organization();
+        organization.setName(name);
+        organization.setRegistrationNumber(registrationNumber);
+        organization.setAddress(address);
+        organization.setCity(city);
+        organization.setCountry(country);
+        organization.setEmailDomain(emailDomain);
 
-        org.bouncycastle.asn1.x500.X500Name x500Name = x500NameBuilderService.build(subjectData);
-        java.security.KeyPair keyPair = keyPairGeneratorService.generateRsaKeyPair();
-        java.math.BigInteger serialNumber = java.math.BigInteger.valueOf(System.currentTimeMillis());
-
-        // Datumi (Root obično traje duže, npr. 10 godina)
-        java.util.Date validFrom = new java.util.Date();
-        java.util.Date validTo = new java.util.Date(System.currentTimeMillis() + (10L * 365 * 24 * 60 * 60 * 1000));
-
-        // Generisanje X509 objekta (Self-signed: issuer name i ključ su isti kao subject)
-        java.security.cert.X509Certificate x509 = certificateGeneratorService.generateCertificate(
-                x500Name, keyPair.getPrivate(), x500Name, keyPair.getPublic(),
-                serialNumber, validFrom, validTo,
-                true,  // isCa
-                true,  // keyCertSign
-                true,  // digitalSignature
-                false, // keyEncipherment
-                "SHA256withRSA"
-        );
-
-        // Čuvanje privatnog ključa u privremenu mapu (KLJUČNI KORAK)
-        certificateKeyMaterialService.rememberPrivateKey(serialNumber.toString(), keyPair.getPrivate());
-
-        // Kreiranje i čuvanje entiteta
-        rs.ac.uns.ftn.pki.model.entity.Certificate rootEntity = new rs.ac.uns.ftn.pki.model.entity.Certificate();
-        rootEntity.setSerialNumber(serialNumber.toString());
-        rootEntity.setSubjectData(subjectData);
-        rootEntity.setType(rs.ac.uns.ftn.pki.model.enums.CertificateType.ROOT);
-        rootEntity.setStatus(rs.ac.uns.ftn.pki.model.enums.CertificateStatus.ACTIVE);
-        rootEntity.setValidFrom(java.time.LocalDateTime.now());
-        rootEntity.setValidTo(java.time.LocalDateTime.now().plusYears(10));
-        rootEntity.setCa(true);
-        rootEntity.setKeyCertSign(true);
-        rootEntity.setDigitalSignature(true);
-        rootEntity.setEncodedCertificate(toPem(x509));
-        rootEntity.setOrganization(null); // Root je sistemski
-
-        certificateRepository.save(rootEntity);
-    }
-
-    private String toPem(java.security.cert.X509Certificate cert) {
-        try {
-            byte[] encoded = cert.getEncoded();
-            String base64 = java.util.Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded);
-            return "-----BEGIN CERTIFICATE-----\n" + base64 + "\n-----END CERTIFICATE-----";
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // Pomoćne metode za preglednost
-    private Organization createOrganization(String name, String reg, String addr, String city, String country, String domain) {
-        Organization org = new Organization();
-        org.setName(name);
-        org.setRegistrationNumber(reg);
-        org.setAddress(addr);     // Rešava tvoj ERROR: null value in column "address"
-        org.setCity(city);
-        org.setCountry(country);
-        org.setEmailDomain(domain);
-        javax.crypto.SecretKey orgKey = keyEncryptionService.generateOrgKey();
-
+        SecretKey orgKey = keyEncryptionService.generateOrgKey();
         byte[] encryptedOrgKey = keyEncryptionService.encrypt(
                 orgKey.getEncoded(),
                 keyEncryptionService.getMasterKey()
         );
 
-        org.setEncryptedOrgKey(encryptedOrgKey);
+        organization.setEncryptedOrgKey(encryptedOrgKey);
 
-        return organizationRepository.save(org);
+        return organizationRepository.save(organization);
     }
 
-    private void createUsers(Organization ftn, Organization nextesy) {
-        // Admin
+    private void createUsers(Organization systemOrganization, Organization ftn, Organization nextesy) {
         User admin = new User();
         admin.setFirstName("Sistem");
         admin.setLastName("Administrator");
@@ -138,9 +121,9 @@ public class DataInitializer implements CommandLineRunner {
         admin.setPasswordHash(passwordEncoder.encode("admin123"));
         admin.setRole(UserRole.ADMIN);
         admin.setActive(true);
+        admin.setOrganization(systemOrganization);
         userRepository.save(admin);
 
-        // CA FTN
         User caFtn = new User();
         caFtn.setFirstName("Nikola");
         caFtn.setLastName("Savic");
@@ -151,7 +134,6 @@ public class DataInitializer implements CommandLineRunner {
         caFtn.setOrganization(ftn);
         userRepository.save(caFtn);
 
-        // CA Nextesy
         User caNextesy = new User();
         caNextesy.setFirstName("Uros");
         caNextesy.setLastName("Milinovic");
@@ -161,5 +143,86 @@ public class DataInitializer implements CommandLineRunner {
         caNextesy.setActive(true);
         caNextesy.setOrganization(nextesy);
         userRepository.save(caNextesy);
+    }
+
+    private void generateSystemRoot(Organization systemOrganization) {
+        X500SubjectData subjectData = new X500SubjectData();
+        subjectData.setCommonName("PKI System Root CA");
+        subjectData.setOrganization(systemOrganization.getName());
+        subjectData.setCountry("RS");
+        subjectData.setEmail("admin@pki.com");
+
+        X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
+        KeyPair keyPair = keyPairGeneratorService.generateRsaKeyPair();
+        BigInteger serialNumber = BigInteger.valueOf(System.currentTimeMillis()).abs();
+
+        Date validFrom = new Date();
+        Date validTo = new Date(System.currentTimeMillis() + (10L * 365 * 24 * 60 * 60 * 1000));
+
+        X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
+                subjectX500Name,
+                keyPair.getPrivate(),
+                subjectX500Name,
+                keyPair.getPublic(),
+                serialNumber,
+                validFrom,
+                validTo,
+                true,
+                true,
+                true,
+                false,
+                "Alternative Names",
+                "SHA256withRSA"
+        );
+
+        Certificate rootCertificate = new Certificate();
+        rootCertificate.setSerialNumber(serialNumber.toString());
+        rootCertificate.setSelfSigned(true);
+        rootCertificate.setSubjectData(subjectData);
+        rootCertificate.setType(CertificateType.ROOT);
+        rootCertificate.setStatus(CertificateStatus.ACTIVE);
+        rootCertificate.setValidFrom(LocalDateTime.now());
+        rootCertificate.setValidTo(LocalDateTime.now().plusYears(10));
+        rootCertificate.setCa(true);
+        rootCertificate.setKeyCertSign(true);
+        rootCertificate.setDigitalSignature(true);
+        rootCertificate.setKeyEncipherment(false);
+        rootCertificate.setEncodedCertificate(toPem(x509Certificate));
+        rootCertificate.setOrganization(systemOrganization);
+        rootCertificate.setIssuerCertificate(null);
+
+        Certificate savedRoot = certificateRepository.save(rootCertificate);
+
+        byte[] orgKeyBytes = keyEncryptionService.decrypt(
+                systemOrganization.getEncryptedOrgKey(),
+                keyEncryptionService.getMasterKey()
+        );
+
+        SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
+
+        byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
+                keyPair.getPrivate().getEncoded(),
+                orgKey
+        );
+
+        PrivateKeyEntity privateKeyEntity = new PrivateKeyEntity();
+        privateKeyEntity.setCertificate(savedRoot);
+        privateKeyEntity.setEncryptedPrivateKey(encryptedPrivateKey);
+        privateKeyEntity.setOrganization(systemOrganization);
+
+        privateKeyRepository.save(privateKeyEntity);
+    }
+
+    private String toPem(X509Certificate certificate) {
+        try {
+            String base64 = Base64.getMimeEncoder(64, "\n".getBytes())
+                    .encodeToString(certificate.getEncoded());
+
+            return "-----BEGIN CERTIFICATE-----\n"
+                    + base64
+                    + "\n-----END CERTIFICATE-----";
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encode certificate to PEM.", e);
+        }
     }
 }

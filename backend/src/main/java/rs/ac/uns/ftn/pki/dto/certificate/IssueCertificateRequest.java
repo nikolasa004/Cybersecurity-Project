@@ -29,7 +29,8 @@ public class IssueCertificateRequest {
     private String organization;
     private String organizationalUnit;
     private String email;
-    private String subjectSerialNumber;
+    
+    private String subjectAlternativeName;
 
     @NotNull
     private LocalDateTime validFrom;

@@ -37,8 +37,7 @@ public class Organization {
     @Column(nullable = false)
     private String emailDomain;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(name = "encrypted_org_key", nullable = false)
     private byte[] encryptedOrgKey;
 
 }
