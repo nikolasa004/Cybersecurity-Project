@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterModule } from '@angular/router';
 import { NavigationItem } from '../../../core/models/navigation-item';
 import { AuthService } from '../../../features/auth/services/auth.service';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';

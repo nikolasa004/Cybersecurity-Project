@@ -11,6 +11,7 @@ import { AuthLayout } from './layouts/auth-layout/auth-layout';
 import { LoginPage } from './features/auth/pages/login-page/login-page';
 import { roleGuard } from './core/guards/role.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { UserCertificatesPage } from './features/certificates/pages/user-certificates-page/user-certificates-page';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -48,9 +49,11 @@ export const routes: Routes = [
   },
   { 
     path: 'user', 
-    component: UserDashboardPage, 
     canActivate: [authGuard, roleGuard], 
-    data: { roles: ['USER'] } 
+    data: { roles: ['USER'] },
+    children: [ { path: '', component: UserDashboardPage},
+    { path: 'certificates', component: UserCertificatesPage }
+    ]
   },
 
   { path: 'activate', component: ActivateAccountPage },

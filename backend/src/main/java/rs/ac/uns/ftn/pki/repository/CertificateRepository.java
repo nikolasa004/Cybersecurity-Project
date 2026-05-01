@@ -35,4 +35,13 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     );
 
     List<Certificate> findAllByOrganizationOrderByCreatedAtDesc(Organization organization);
+
+    @EntityGraph(attributePaths = {"issuerCertificate", "organization"})
+    List<Certificate> findAllByOrganizationAndTypeOrderByCreatedAtDesc(
+            Organization organization,
+            CertificateType type
+    );
+
+    @EntityGraph(attributePaths = {"issuerCertificate", "organization"})
+    List<Certificate> findAllBySubjectDataEmailOrderByCreatedAtDesc(String email);
 }

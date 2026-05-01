@@ -2,6 +2,7 @@ package rs.ac.uns.ftn.pki.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
@@ -53,6 +54,7 @@ public class CertificateServiceImpl implements CertificateService {
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
     private final AuthService authService;
+
 
     @Override
     @Transactional(readOnly = true)
@@ -516,4 +518,17 @@ public class CertificateServiceImpl implements CertificateService {
             throw new RuntimeException("Failed to save certificate to file", e);
         }
     }
+    @Transactional(readOnly = true)
+    public List<CertificateListResponse> getAllForUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return certificateRepository
+                .findAllBySubjectDataEmailOrderByCreatedAtDesc(email)
+                .stream()
+                .map(certificateMapper::toListResponse)
+                .toList();
+    }
+
+
+
 }

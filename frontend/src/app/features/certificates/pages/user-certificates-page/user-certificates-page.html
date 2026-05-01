@@ -1,0 +1,82 @@
+<app-shell
+  sidebarTitle="User panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="certificates-page">
+    <div class="certificates-page__header">
+      <div>
+        <h1>My Certificates</h1>
+        <p>Review your issued certificates.</p>
+      </div>
+    </div>
+
+    @if (errorMessage) {
+      <div class="certificates-alert certificates-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    <div class="certificates-panel">
+      @if (loading) {
+        <p>Loading certificates...</p>
+      } @else if (certificates.length === 0) {
+        <p>No certificates found.</p>
+      } @else {
+        <div class="certificates-list">
+          @for (certificate of certificates; track certificate.id) {
+            <div class="certificate-card">
+              <div class="certificate-card__top">
+                <div>
+                  <h2>{{ certificate.subjectCommonName || 'Unnamed subject' }}</h2>
+                  <p>{{ certificate.organizationName || 'No organization' }}</p>
+                </div>
+
+                <div class="certificate-card__badges">
+                  <span class="badge badge--type">{{ getTypeLabel(certificate.type) }}</span>
+                  <span
+                    class="badge"
+                    [class.badge--active]="certificate.status === 'ACTIVE'"
+                    [class.badge--revoked]="certificate.status === 'REVOKED'"
+                    [class.badge--expired]="certificate.status === 'EXPIRED'"
+                  >
+                    {{ getStatusLabel(certificate.status) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="certificate-card__grid">
+                <div>
+                  <span class="certificate-card__label">Serial number</span>
+                  <span class="certificate-card__value">{{ certificate.serialNumber }}</span>
+                </div>
+
+                <div>
+                  <span class="certificate-card__label">Issuer</span>
+                  <span class="certificate-card__value">{{ certificate.issuerCommonName || 'Self-signed' }}</span>
+                </div>
+
+                <div>
+                  <span class="certificate-card__label">Valid from</span>
+                  <span class="certificate-card__value">{{ certificate.validFrom | date:'medium' }}</span>
+                </div>
+
+                <div>
+                  <span class="certificate-card__label">Valid to</span>
+                  <span class="certificate-card__value">{{ certificate.validTo | date:'medium' }}</span>
+                </div>
+
+                <div class="certificate-card__wide">
+                  <span class="certificate-card__label">Signature algorithm</span>
+                  <span class="certificate-card__value">{{ certificate.signatureAlgorithm || 'Not available' }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</app-shell>

@@ -31,4 +31,10 @@ export class CertificatesService {
     const url = isAdmin ? `${this.adminUrl}/issue` : `${this.caUrl}/issue`;
     return this.http.post<CertificateListItem>(url, payload);
   }
+
+  getUserCertificates(): Observable<CertificateListItem[]> {
+  return this.http.get<CertificateListItem[]>(
+    `${API_BASE_URL}/user/certificates`
+  );
+}
 }

@@ -37,4 +37,9 @@ public class CertificateController {
     public ResponseEntity<CertificateListResponse> issue(@Valid @RequestBody IssueCertificateRequest request) {
         return ResponseEntity.status(201).body(certificateService.issueCertificate(request));
     }
+    @GetMapping("/user/certificates")
+    public List<CertificateListResponse> getUserCertificates() {
+        return certificateService.getAllForUser();
+    }
+
 }
