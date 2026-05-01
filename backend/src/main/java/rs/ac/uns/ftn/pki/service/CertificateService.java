@@ -14,4 +14,5 @@ public interface CertificateService {
     List<IssuerOptionResponse> getAvailableIssuersForCa();
     CertificateListResponse issueCertificateAsCa(IssueCertificateRequest request);
     public List<CertificateListResponse> getAllForCa();
+    List<CertificateListResponse> getAllForUser();
 }

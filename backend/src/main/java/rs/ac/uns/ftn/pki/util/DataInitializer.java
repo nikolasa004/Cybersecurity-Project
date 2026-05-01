@@ -82,6 +82,7 @@ public class DataInitializer implements CommandLineRunner {
 
         createUsers(systemOrganization, ftn, nextesy);
         generateSystemRoot(systemOrganization);
+        generateEndEntityCertificates();
 
         System.out.println(">> PKI test data and System Root CA successfully initialized.");
     }
@@ -143,6 +144,27 @@ public class DataInitializer implements CommandLineRunner {
         caNextesy.setActive(true);
         caNextesy.setOrganization(nextesy);
         userRepository.save(caNextesy);
+
+        User newUser  = new User();
+        newUser.setFirstName("Nikola");
+        newUser.setLastName("Bjelica");
+        newUser.setEmail("user1@pki.com");
+        newUser.setPasswordHash(passwordEncoder.encode("user123"));
+        newUser.setRole(UserRole.USER);
+        newUser.setActive(true);
+        newUser.setOrganization(systemOrganization);
+        userRepository.save(newUser);
+
+        User newUser2 = new User();
+        newUser2.setFirstName("Nikola");
+        newUser2.setLastName("Milinovic");
+        newUser2.setEmail("user2@pki.com");
+        newUser2.setPasswordHash(passwordEncoder.encode("user123"));
+        newUser2.setRole(UserRole.USER);
+        newUser2.setActive(true);
+        newUser2.setOrganization(systemOrganization);
+        userRepository.save(newUser2);
+
     }
 
     private void generateSystemRoot(Organization systemOrganization) {
@@ -225,4 +247,90 @@ public class DataInitializer implements CommandLineRunner {
             throw new RuntimeException("Failed to encode certificate to PEM.", e);
         }
     }
+    private void generateEndEntityCertificates() {
+        User user1 = userRepository.findByEmail("user1@pki.com").orElseThrow();
+        User user2 = userRepository.findByEmail("user2@pki.com").orElseThrow();
+
+        Certificate root = certificateRepository.findAll().stream()
+                .filter(c -> c.getType() == CertificateType.ROOT)
+                .findFirst()
+                .orElseThrow();
+
+        // 2 certifikata za user1
+        createEndEntityCert(user1, root);
+        createEndEntityCert(user1, root);
+
+        // 1 za user2
+        createEndEntityCert(user2, root);
+    }
+    private void createEndEntityCert(User user, Certificate issuerCert) {
+        X500SubjectData subjectData = new X500SubjectData();
+        subjectData.setCommonName(user.getFirstName() + " " + user.getLastName());
+        subjectData.setOrganization(user.getOrganization().getName());
+        subjectData.setCountry("RS");
+        subjectData.setEmail(user.getEmail());
+
+        X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
+
+        KeyPair keyPair = keyPairGeneratorService.generateRsaKeyPair();
+        BigInteger serialNumber = BigInteger.valueOf(System.nanoTime()).abs();
+
+        Date validFrom = new Date();
+        Date validTo = new Date(System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000));
+
+        X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
+                subjectX500Name,
+                keyPair.getPrivate(),
+                x500NameBuilderService.build(issuerCert.getSubjectData()),
+                keyPair.getPublic(),
+                serialNumber,
+                validFrom,
+                validTo,
+                false,
+                false,
+                true,
+                true,
+                null,
+                "SHA256withRSA"
+        );
+
+        Certificate cert = new Certificate();
+        cert.setSerialNumber(serialNumber.toString());
+        cert.setSelfSigned(false);
+        cert.setSubjectData(subjectData);
+        cert.setType(CertificateType.END_ENTITY);
+        cert.setStatus(CertificateStatus.ACTIVE);
+        cert.setValidFrom(LocalDateTime.now());
+        cert.setValidTo(LocalDateTime.now().plusYears(1));
+        cert.setCa(false);
+        cert.setKeyCertSign(false);
+        cert.setDigitalSignature(true);
+        cert.setKeyEncipherment(true);
+        cert.setEncodedCertificate(toPem(x509Certificate));
+        cert.setOrganization(user.getOrganization());
+        cert.setIssuerCertificate(issuerCert);
+
+        Certificate saved = certificateRepository.save(cert);
+
+        byte[] orgKeyBytes = keyEncryptionService.decrypt(
+                user.getOrganization().getEncryptedOrgKey(),
+                keyEncryptionService.getMasterKey()
+        );
+
+        SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
+
+        byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
+                keyPair.getPrivate().getEncoded(),
+                orgKey
+        );
+
+        PrivateKeyEntity privateKeyEntity = new PrivateKeyEntity();
+        privateKeyEntity.setCertificate(saved);
+        privateKeyEntity.setEncryptedPrivateKey(encryptedPrivateKey);
+        privateKeyEntity.setOrganization(user.getOrganization());
+
+        privateKeyRepository.save(privateKeyEntity);
+        System.out.println("CREATED CERT FOR: " + user.getEmail());
+    }
+
 }
