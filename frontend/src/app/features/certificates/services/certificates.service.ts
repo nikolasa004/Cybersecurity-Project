@@ -33,8 +33,17 @@ export class CertificatesService {
   }
 
   getUserCertificates(): Observable<CertificateListItem[]> {
-  return this.http.get<CertificateListItem[]>(
-    `${API_BASE_URL}/user/certificates`
-  );
-}
+    return this.http.get<CertificateListItem[]>(
+      `${API_BASE_URL}/user/certificates`
+    );
+  }
+
+  downloadWithKey(isAdmin: boolean, certificateId: number): Observable<ArrayBuffer> {
+    const base = isAdmin ? this.adminUrl : this.caUrl;
+
+    return this.http.get(
+      `${base}/download-with-key/${certificateId}`,
+      { responseType: 'arraybuffer' }
+    );
+  }
 }

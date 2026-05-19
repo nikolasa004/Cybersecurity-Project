@@ -7,6 +7,7 @@ import { CertificatesService } from '../../services/certificates.service';
 import { CertificateListItem } from '../../models/certificate-list.model';
 import { AuthService } from '../../../auth/services/auth.service';
 import { CurrentUserService } from '../../../users/services/current-user.service';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-admin-certificates-page',
@@ -70,6 +71,27 @@ export class AdminCertificatesPage implements OnInit {
         organization: user.organizationName || (this.isAdmin ? 'System Administration' : 'No organization')
       };
     });
+  }
+
+  downloadWithKey(certificateId: number, commonName: string): void {
+    this.certificatesService.downloadWithKey(this.isAdmin, certificateId)
+      .subscribe({
+        next: (data: ArrayBuffer) => {
+          this.downloadCertificate(data, commonName);
+        },
+        error: (err) => {
+          this.errorMessage =
+            err?.error?.message || 'Failed to download certificate.';
+        }
+      });
+  }
+
+  private downloadCertificate(data: ArrayBuffer, cn: string): void {
+    const blob = new Blob([data], {
+      type: 'application/x-pkcs12'
+    });
+
+    saveAs(blob, `${cn || 'certificate'}.p12`);
   }
 
   getStatusLabel(status: string): string {

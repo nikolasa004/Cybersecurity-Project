@@ -49,6 +49,18 @@
                     {{ getStatusLabel(certificate.status) }}
                   </span>
                 </div>
+                @if (certificate.type !== 'END_ENTITY') {
+                  <div class="certificate-card__actions">
+                    
+                    <button
+                      class="btn btn--download"
+                      (click)="downloadWithKey(certificate.id, certificate.subjectCommonName || `certificate-${certificate.id}`)"
+                    >
+                      Export certificate with key
+                    </button>
+                  
+                  </div>
+                }
               </div>
 
               <div class="certificate-card__grid">

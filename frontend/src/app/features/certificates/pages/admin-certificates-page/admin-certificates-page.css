@@ -146,6 +146,22 @@
   word-break: break-word;
 }
 
+.certificate-card__actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  font-size:14px;
+}
+
+.btn--download {
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+  background: #2d6cdf;
+  color: white;
+  border-radius: 6px;
+}
+
 @media (max-width: 900px) {
   .certificates-page__header {
     flex-direction: column;

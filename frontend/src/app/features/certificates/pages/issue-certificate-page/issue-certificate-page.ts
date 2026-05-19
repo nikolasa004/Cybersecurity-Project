@@ -10,6 +10,7 @@ import { OrganizationsService } from '../../../organizations/services/organizati
 import { Organization } from '../../../organizations/models/organization.model';
 import { AuthService } from '../../../auth/services/auth.service';
 import { CurrentUserService } from '../../../users/services/current-user.service';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-issue-certificate-page',
@@ -224,12 +225,24 @@ export class IssueCertificatePage implements OnInit {
         this.submitting = false;
         this.successMessage = `Certificate "${created.subjectCommonName}" issued successfully.`;
         this.resetForm();
+        if (created.certificateData != null) {
+          this.downloadCertificate(created.certificateData!, created.subjectCommonName || `certificate-${created.id}`);
+        }
       },
       error: (err) => {
         this.submitting = false;
         this.errorMessage = err?.error?.message || 'Failed to issue certificate.';
       }
     });
+  }
+
+
+  private downloadCertificate(data: ArrayBuffer, cn: string): void {
+    const blob = new Blob([data], {
+      type: 'application/x-pkcs12'
+    });
+
+    saveAs(blob, `${cn || 'certificate'}.p12`);
   }
 
   private resetForm(): void {

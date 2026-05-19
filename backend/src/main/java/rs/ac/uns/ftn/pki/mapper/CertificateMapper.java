@@ -2,6 +2,7 @@ package rs.ac.uns.ftn.pki.mapper;
 
 import org.springframework.stereotype.Component;
 import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
+import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
 import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
 import rs.ac.uns.ftn.pki.model.entity.Certificate;
 
@@ -22,6 +23,24 @@ public class CertificateMapper {
                 certificate.getValidFrom(),
                 certificate.getValidTo(),
                 certificate.getSignatureAlgorithm()
+        );
+    }
+
+    public CertificateResponse toResponse(Certificate certificate, byte[] certificateBytes) {
+        return new CertificateResponse(
+                certificate.getId(),
+                certificate.getSerialNumber(),
+                certificate.getType(),
+                certificate.getStatus(),
+                certificate.getSubjectData() != null ? certificate.getSubjectData().getCommonName() : null,
+                certificate.getSubjectData() != null ? certificate.getSubjectData().getOrganization() : null,
+                resolveIssuerCommonName(certificate),
+                certificate.getOrganization() != null ? certificate.getOrganization().getName() : null,
+                certificate.isCa(),
+                certificate.getValidFrom(),
+                certificate.getValidTo(),
+                certificate.getSignatureAlgorithm(),
+                certificateBytes
         );
     }
 

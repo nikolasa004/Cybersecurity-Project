@@ -1,29 +1,5 @@
 package rs.ac.uns.ftn.pki.service.impl;
 
-import lombok.RequiredArgsConstructor;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
-import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
-import rs.ac.uns.ftn.pki.exception.BadRequestException;
-import rs.ac.uns.ftn.pki.exception.NotFoundException;
-import rs.ac.uns.ftn.pki.mapper.CertificateMapper;
-import rs.ac.uns.ftn.pki.mapper.CertificateSubjectMapper;
-import rs.ac.uns.ftn.pki.model.entity.*;
-import rs.ac.uns.ftn.pki.model.enums.CertificateStatus;
-import rs.ac.uns.ftn.pki.model.enums.CertificateType;
-import rs.ac.uns.ftn.pki.repository.CertificateRepository;
-import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
-import rs.ac.uns.ftn.pki.repository.PrivateKeyRepository;
-import rs.ac.uns.ftn.pki.service.AuthService;
-import rs.ac.uns.ftn.pki.service.CertificateService;
-import rs.ac.uns.ftn.pki.service.crypto.*;
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +15,43 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.bouncycastle.asn1.x500.X500Name;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
+import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
+import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
+import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
+import rs.ac.uns.ftn.pki.exception.BadRequestException;
+import rs.ac.uns.ftn.pki.exception.CertificateFileReadException;
+import rs.ac.uns.ftn.pki.exception.NotFoundException;
+import rs.ac.uns.ftn.pki.exception.CreatePkcs12Exception;
+import rs.ac.uns.ftn.pki.mapper.CertificateMapper;
+import rs.ac.uns.ftn.pki.mapper.CertificateSubjectMapper;
+import rs.ac.uns.ftn.pki.model.entity.Certificate;
+import rs.ac.uns.ftn.pki.model.entity.Organization;
+import rs.ac.uns.ftn.pki.model.entity.PrivateKeyEntity;
+import rs.ac.uns.ftn.pki.model.entity.User;
+import rs.ac.uns.ftn.pki.model.entity.X500SubjectData;
+import rs.ac.uns.ftn.pki.model.enums.CertificateStatus;
+import rs.ac.uns.ftn.pki.model.enums.CertificateType;
+import rs.ac.uns.ftn.pki.repository.CertificateRepository;
+import rs.ac.uns.ftn.pki.repository.OrganizationRepository;
+import rs.ac.uns.ftn.pki.repository.PrivateKeyRepository;
+import rs.ac.uns.ftn.pki.service.AuthService;
+import rs.ac.uns.ftn.pki.service.CertificateService;
+import rs.ac.uns.ftn.pki.service.crypto.CertificateEntityFactory;
+import rs.ac.uns.ftn.pki.service.crypto.CertificateGeneratorService;
+import rs.ac.uns.ftn.pki.service.crypto.KeyEncryptionService;
+import rs.ac.uns.ftn.pki.service.crypto.KeyPairGeneratorService;
+import rs.ac.uns.ftn.pki.service.crypto.X500NameBuilderService;
 
 @Service
 @RequiredArgsConstructor
@@ -90,7 +103,7 @@ public class CertificateServiceImpl implements CertificateService {
 
     @Override
     @Transactional
-    public CertificateListResponse issueCertificate(IssueCertificateRequest request) {
+    public CertificateResponse issueCertificate(IssueCertificateRequest request) {
         validateIssueRequest(request);
 
         Certificate issuerCertificate = resolveIssuerCertificate(request);
@@ -176,23 +189,29 @@ public class CertificateServiceImpl implements CertificateService {
         Certificate saved = certificateRepository.save(certificate);
 
         saveCertificateToFile(saved);
-
+        byte[] pkcs12 = null;
         if (request.getType() != CertificateType.END_ENTITY) {
-
             byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
                     subjectKeyPair.getPrivate().getEncoded(),
                     orgKey
             );
-
             PrivateKeyEntity privateKeyEntity = new PrivateKeyEntity();
             privateKeyEntity.setCertificate(saved);
             privateKeyEntity.setEncryptedPrivateKey(encryptedPrivateKey);
             privateKeyEntity.setOrganization(organization);
-
             privateKeyRepository.save(privateKeyEntity);
+        } else {
+            try {
+                pkcs12 = createPkcs12(
+                        subjectKeyPair.getPrivate(),
+                        x509Certificate,
+                        certificate.getSerialNumber()
+                );
+            } catch (Exception e) {
+                throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
+            }
         }
-
-        return certificateMapper.toListResponse(saved);
+        return certificateMapper.toResponse(saved, pkcs12);
     }
 
     private void validateIssueRequest(IssueCertificateRequest request) {
@@ -296,7 +315,7 @@ public class CertificateServiceImpl implements CertificateService {
 
     @Override
     @Transactional
-    public CertificateListResponse issueCertificateAsCa(IssueCertificateRequest request) {
+    public CertificateResponse issueCertificateAsCa(IssueCertificateRequest request) {
         User currentUser = authService.getLoggedInUser();
 
         Certificate issuer = certificateRepository.findById(request.getIssuerCertificateId())
@@ -315,7 +334,7 @@ public class CertificateServiceImpl implements CertificateService {
         try {
             PrivateKeyEntity keyEntity = privateKeyRepository
                     .findByCertificate(issuer)
-                    .orElseThrow(() -> new RuntimeException("Private key not found"));
+                    .orElseThrow(() -> new NotFoundException("Private key not found"));
 
             byte[] orgKeyBytes = keyEncryptionService.decrypt(
                     issuer.getOrganization().getEncryptedOrgKey(),
@@ -336,7 +355,7 @@ public class CertificateServiceImpl implements CertificateService {
             );
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load issuer private key", e);
+            throw new NotFoundException("Failed to load issuer private key");
         }
 
         BigInteger serialNumber = generateSerialNumber();
@@ -369,27 +388,35 @@ public class CertificateServiceImpl implements CertificateService {
         Certificate saved = certificateRepository.save(certificate);
 
         saveCertificateToFile(saved);
-
-        byte[] orgKeyBytes = keyEncryptionService.decrypt(
+        byte[] pkcs12 = null;
+        if (request.getType() != CertificateType.END_ENTITY) {
+            byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 currentUser.getOrganization().getEncryptedOrgKey(),
                 keyEncryptionService.getMasterKey()
-        );
-
-        SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
-
-        byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
+            );
+            SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
+            byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
                 subjectKeyPair.getPrivate().getEncoded(),
                 orgKey
-        );
+            );
+            PrivateKeyEntity privateKeyEntity = new PrivateKeyEntity();
+            privateKeyEntity.setCertificate(saved);
+            privateKeyEntity.setEncryptedPrivateKey(encryptedPrivateKey);
+            privateKeyEntity.setOrganization(currentUser.getOrganization());
+            privateKeyRepository.save(privateKeyEntity);
 
-        PrivateKeyEntity privateKeyEntity = new PrivateKeyEntity();
-        privateKeyEntity.setCertificate(saved);
-        privateKeyEntity.setEncryptedPrivateKey(encryptedPrivateKey);
-        privateKeyEntity.setOrganization(currentUser.getOrganization());
-
-        privateKeyRepository.save(privateKeyEntity);
-
-        return certificateMapper.toListResponse(saved);
+        } else {
+            try {
+            pkcs12 = createPkcs12(
+                subjectKeyPair.getPrivate(),
+                x509Certificate,
+                certificate.getSerialNumber()
+            );
+            } catch (Exception e) {
+            throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
+            }
+        }
+        return certificateMapper.toResponse(saved, pkcs12);
     }
 
     private void validateCertificateForCa(Certificate issuer, IssueCertificateRequest request, User currentUser) {
@@ -515,7 +542,7 @@ public class CertificateServiceImpl implements CertificateService {
             Files.write(filePath, certificate.getEncodedCertificate().getBytes());
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save certificate to file", e);
+            throw new CertificateFileReadException("Failed to save certificate to file", e);
         }
     }
     @Transactional(readOnly = true)
@@ -527,6 +554,73 @@ public class CertificateServiceImpl implements CertificateService {
                 .stream()
                 .map(certificateMapper::toListResponse)
                 .toList();
+    }
+
+
+    private String readCertificateFromFile(Certificate certificate) {
+        try {
+            Path dir = Paths.get("certs");
+            String fileName = certificate.getSubjectData().getCommonName()
+                    + "_" + certificate.getSerialNumber() + ".pem";
+            Path filePath = dir.resolve(fileName);
+            return Files.readString(filePath);
+        } catch (Exception e) {
+            throw new CertificateFileReadException("Failed to read certificate from file", e);
+        }
+    }
+
+
+    private byte[] createPkcs12(PrivateKey privateKey, X509Certificate certificate, String alias) {
+        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+            java.security.KeyStore pkcs12 = java.security.KeyStore.getInstance("PKCS12");
+            pkcs12.load(null, null);
+            java.security.cert.Certificate[] chain = new java.security.cert.Certificate[] { certificate };
+            pkcs12.setKeyEntry(alias, privateKey, new char[0], chain);
+            pkcs12.store(baos, new char[0]);
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new CreatePkcs12Exception("Failed to create PKCS12 keystore", e);
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public byte[] downloadPkcs12WithKey(Long certificateId) {
+        Certificate certificate = certificateRepository.findById(certificateId)
+                .orElseThrow(() -> new NotFoundException("Certificate not found."));
+
+        if (certificate.getType() == CertificateType.END_ENTITY) {
+            throw new BadRequestException("Download with private key is not allowed for End Entity certificates.");
+        }
+
+        PrivateKeyEntity privateKeyEntity = privateKeyRepository.findByCertificate(certificate)
+                .orElseThrow(() -> new NotFoundException("Private key not found for certificate."));
+
+        if (certificate.getOrganization() == null) {
+            throw new BadRequestException("Certificate organization missing.");
+        }
+
+        byte[] orgKeyBytes = keyEncryptionService.decrypt(
+                certificate.getOrganization().getEncryptedOrgKey(),
+                keyEncryptionService.getMasterKey()
+        );
+        SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
+        byte[] decryptedKey = keyEncryptionService.decrypt(
+                privateKeyEntity.getEncryptedPrivateKey(),
+                orgKey
+        );
+        PrivateKey privateKey;
+        try {
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decryptedKey));
+        } catch (Exception e) {
+            throw new NotFoundException("Failed to load private key");
+        }
+
+        String pem = readCertificateFromFile(certificate);
+        X509Certificate x509Certificate = convertToX509(pem);
+
+        return createPkcs12(privateKey, x509Certificate, certificate.getSerialNumber());
     }
 
 
