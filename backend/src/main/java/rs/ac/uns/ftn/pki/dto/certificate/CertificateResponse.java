@@ -22,5 +22,5 @@ public class CertificateResponse {
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
     private String signatureAlgorithm;
-    private byte[] certificateData;
+    private String certificateData;
 }

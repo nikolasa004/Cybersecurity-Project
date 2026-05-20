@@ -6,6 +6,8 @@ import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
 import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
 import rs.ac.uns.ftn.pki.model.entity.Certificate;
 
+import java.util.Base64;
+
 @Component
 public class CertificateMapper {
 
@@ -27,7 +29,14 @@ public class CertificateMapper {
     }
 
     public CertificateResponse toResponse(Certificate certificate, byte[] certificateBytes) {
-        return new CertificateResponse(
+        if (certificateBytes == null) {
+            certificateBytes = new byte[0];
+        }
+        String base64 =
+                Base64.getEncoder()
+                        .encodeToString(certificateBytes);
+
+        CertificateResponse response =  new CertificateResponse(
                 certificate.getId(),
                 certificate.getSerialNumber(),
                 certificate.getType(),
@@ -40,8 +49,9 @@ public class CertificateMapper {
                 certificate.getValidFrom(),
                 certificate.getValidTo(),
                 certificate.getSignatureAlgorithm(),
-                certificateBytes
+                base64
         );
+        return response;
     }
 
     public IssuerOptionResponse toIssuerOptionResponse(Certificate certificate) {

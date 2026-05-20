@@ -225,7 +225,7 @@ export class IssueCertificatePage implements OnInit {
         this.submitting = false;
         this.successMessage = `Certificate "${created.subjectCommonName}" issued successfully.`;
         this.resetForm();
-        if (created.certificateData != null) {
+        if (created.certificateData != null && created.certificateData.length > 0) {
           this.downloadCertificate(created.certificateData!, created.subjectCommonName || `certificate-${created.id}`);
         }
       },
@@ -237,8 +237,17 @@ export class IssueCertificatePage implements OnInit {
   }
 
 
-  private downloadCertificate(data: ArrayBuffer, cn: string): void {
-    const blob = new Blob([data], {
+  private downloadCertificate(
+    base64: string,
+     cn: string
+  ): void {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], {
       type: 'application/x-pkcs12'
     });
 

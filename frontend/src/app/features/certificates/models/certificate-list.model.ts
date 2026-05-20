@@ -11,5 +11,5 @@ export interface CertificateListItem {
   validFrom: string;
   validTo: string;
   signatureAlgorithm: string | null;
-  certificateData: ArrayBuffer  | null;
+  certificateData: string | null;
 }

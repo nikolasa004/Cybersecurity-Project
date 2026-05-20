@@ -1,17 +1,16 @@
 package rs.ac.uns.ftn.pki.service.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -204,8 +203,7 @@ public class CertificateServiceImpl implements CertificateService {
             try {
                 pkcs12 = createPkcs12(
                         subjectKeyPair.getPrivate(),
-                        x509Certificate,
-                        certificate.getSerialNumber()
+                        certificate
                 );
             } catch (Exception e) {
                 throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
@@ -409,9 +407,7 @@ public class CertificateServiceImpl implements CertificateService {
             try {
             pkcs12 = createPkcs12(
                 subjectKeyPair.getPrivate(),
-                x509Certificate,
-                certificate.getSerialNumber()
-            );
+                certificate);
             } catch (Exception e) {
             throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
             }
@@ -514,12 +510,6 @@ public class CertificateServiceImpl implements CertificateService {
                 }
 
                 currentX509.verify(publicKeyToVerifyWith);
-                System.out.println(
-                        "Verified certificate: "
-                                + currentX509.getSubjectX500Principal()
-                                + " | Issuer: "
-                                + currentX509.getIssuerX500Principal()
-                );
                 // stop after verifying ROOT
                 if (current.getType() == CertificateType.ROOT) {
                     break;
@@ -611,17 +601,72 @@ public class CertificateServiceImpl implements CertificateService {
         }
     }
 
+    private java.security.cert.Certificate[]  buildCertificateChain(Certificate certificate) {
 
-    private byte[] createPkcs12(PrivateKey privateKey, X509Certificate certificate, String alias) {
-        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
-            java.security.KeyStore pkcs12 = java.security.KeyStore.getInstance("PKCS12");
+        List<java.security.cert.Certificate> chain =
+                new ArrayList<>();
+
+        Certificate current = certificate;
+
+        while (current != null) {
+
+            String pem = readCertificateFromFile(current);
+
+            X509Certificate x509 =
+                    convertToX509(pem);
+
+            chain.add(x509);
+
+            if (current.getType() == CertificateType.ROOT) {
+                break;
+            }
+
+            current = current.getIssuerCertificate();
+        }
+
+        return chain.toArray(
+                new java.security.cert.Certificate[0]
+        );
+    }
+
+    private byte[] createPkcs12(
+            PrivateKey privateKey,
+            Certificate certificate) {
+
+        try (ByteArrayOutputStream baos =
+                     new ByteArrayOutputStream()) {
+
+            KeyStore pkcs12 =
+                    KeyStore.getInstance("PKCS12");
+
             pkcs12.load(null, null);
-            java.security.cert.Certificate[] chain = new java.security.cert.Certificate[] { certificate };
-            pkcs12.setKeyEntry(alias, privateKey, new char[0], chain);
+
+            java.security.cert.Certificate[] chain =
+                    buildCertificateChain(certificate);
+
+            String alias =
+                    certificate.getSubjectData()
+                            .getCommonName()
+                            + "_"
+                            + certificate.getSerialNumber();
+
+            pkcs12.setKeyEntry(
+                    alias,
+                    privateKey,
+                    new char[0],
+                    chain
+            );
+
             pkcs12.store(baos, new char[0]);
+
             return baos.toByteArray();
+
         } catch (Exception e) {
-            throw new CreatePkcs12Exception("Failed to create PKCS12 keystore", e);
+
+            throw new CreatePkcs12Exception(
+                    "Failed to create PKCS12 keystore",
+                    e
+            );
         }
     }
 
@@ -658,11 +703,7 @@ public class CertificateServiceImpl implements CertificateService {
         } catch (Exception e) {
             throw new NotFoundException("Failed to load private key");
         }
-
-        String pem = readCertificateFromFile(certificate);
-        X509Certificate x509Certificate = convertToX509(pem);
-
-        return createPkcs12(privateKey, x509Certificate, certificate.getSerialNumber());
+        return createPkcs12(privateKey, certificate);
     }
 
 
