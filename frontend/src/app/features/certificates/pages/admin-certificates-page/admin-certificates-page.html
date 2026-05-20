@@ -53,7 +53,7 @@
                   <div class="certificate-card__actions">
                     
                     <button
-                      class="btn btn--download"
+                      class="btn-primary"
                       (click)="downloadWithKey(certificate.id, certificate.subjectCommonName || `certificate-${certificate.id}`)"
                     >
                       Export certificate with key
@@ -105,4 +105,45 @@
       }
     </div>
   </section>
+
+  @if (showPasswordModal) {
+    <div class="modal-backdrop">
+
+      <div class="password-modal">
+
+        <h3>Export PKCS12</h3>
+
+        <p>
+          Enter a password to protect the PKCS12 file.
+          Leave empty for no password.
+        </p>
+
+        <input
+          type="password"
+          [(ngModel)]="pkcs12Password"
+          placeholder="Password (optional)"
+        />
+
+        <div class="password-modal__actions">
+
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closePasswordModal()"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="btn-primary"
+            (click)="confirmDownload()"
+          >
+            Download
+          </button>
+
+        </div>
+      </div>
+    </div>
+  }
 </app-shell>

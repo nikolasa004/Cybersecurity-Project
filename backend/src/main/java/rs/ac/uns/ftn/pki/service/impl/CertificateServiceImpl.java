@@ -24,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
-import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
+import rs.ac.uns.ftn.pki.dto.certificate.*;
 import rs.ac.uns.ftn.pki.exception.BadRequestException;
 import rs.ac.uns.ftn.pki.exception.CertificateFileReadException;
 import rs.ac.uns.ftn.pki.exception.NotFoundException;
@@ -203,7 +200,8 @@ public class CertificateServiceImpl implements CertificateService {
             try {
                 pkcs12 = createPkcs12(
                         subjectKeyPair.getPrivate(),
-                        certificate
+                        certificate,
+                        null
                 );
             } catch (Exception e) {
                 throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
@@ -407,7 +405,8 @@ public class CertificateServiceImpl implements CertificateService {
             try {
             pkcs12 = createPkcs12(
                 subjectKeyPair.getPrivate(),
-                certificate);
+                certificate,
+                    null);
             } catch (Exception e) {
             throw new CreatePkcs12Exception("Failed to create PKCS12 for End Entity", e);
             }
@@ -631,7 +630,8 @@ public class CertificateServiceImpl implements CertificateService {
 
     private byte[] createPkcs12(
             PrivateKey privateKey,
-            Certificate certificate) {
+            Certificate certificate,
+            String password) {
 
         try (ByteArrayOutputStream baos =
                      new ByteArrayOutputStream()) {
@@ -649,15 +649,18 @@ public class CertificateServiceImpl implements CertificateService {
                             .getCommonName()
                             + "_"
                             + certificate.getSerialNumber();
-
+            char[] passwordChars =
+                    password == null
+                            ? new char[0]
+                            : password.toCharArray();
             pkcs12.setKeyEntry(
                     alias,
                     privateKey,
-                    new char[0],
+                    passwordChars,
                     chain
             );
 
-            pkcs12.store(baos, new char[0]);
+            pkcs12.store(baos, passwordChars);
 
             return baos.toByteArray();
 
@@ -672,7 +675,7 @@ public class CertificateServiceImpl implements CertificateService {
 
 
     @Transactional(readOnly = true)
-    public byte[] downloadPkcs12WithKey(Long certificateId) {
+    public byte[] downloadPkcs12WithKey(Long certificateId, DownloadCertificateRequest request) {
         Certificate certificate = certificateRepository.findById(certificateId)
                 .orElseThrow(() -> new NotFoundException("Certificate not found."));
 
@@ -703,7 +706,7 @@ public class CertificateServiceImpl implements CertificateService {
         } catch (Exception e) {
             throw new NotFoundException("Failed to load private key");
         }
-        return createPkcs12(privateKey, certificate);
+        return createPkcs12(privateKey, certificate, request.getPassword());
     }
 
 

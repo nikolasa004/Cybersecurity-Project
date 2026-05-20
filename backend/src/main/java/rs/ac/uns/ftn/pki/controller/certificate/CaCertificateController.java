@@ -8,10 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
-import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
+import rs.ac.uns.ftn.pki.dto.certificate.*;
 import rs.ac.uns.ftn.pki.service.CertificateService;
 
 @RestController
@@ -38,9 +35,9 @@ public class CaCertificateController {
         return ResponseEntity.status(201).body(certificateService.issueCertificateAsCa(request));
     }
 
-    @GetMapping("/download-with-key/{certificateId}")
-    public ResponseEntity<byte[]> downloadWithKey(@PathVariable Long certificateId) {
-        byte[] pkcs12 = certificateService.downloadPkcs12WithKey(certificateId);
+    @PostMapping("/download-with-key/{certificateId}")
+    public ResponseEntity<byte[]> downloadWithKey(@PathVariable Long certificateId, @RequestBody DownloadCertificateRequest request) {
+        byte[] pkcs12 = certificateService.downloadPkcs12WithKey(certificateId, request);
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=certificate_" + certificateId + ".p12")
                 .header("Content-Type", "application/x-pkcs12")

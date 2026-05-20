@@ -38,11 +38,14 @@ export class CertificatesService {
     );
   }
 
-  downloadWithKey(isAdmin: boolean, certificateId: number): Observable<ArrayBuffer> {
+  downloadWithKey(isAdmin: boolean,
+     certificateId: number,
+  password: string): Observable<ArrayBuffer> {
     const base = isAdmin ? this.adminUrl : this.caUrl;
 
-    return this.http.get(
+    return this.http.post(
       `${base}/download-with-key/${certificateId}`,
+      { password},
       { responseType: 'arraybuffer' }
     );
   }
