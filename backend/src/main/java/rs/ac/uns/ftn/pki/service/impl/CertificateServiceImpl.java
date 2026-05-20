@@ -462,7 +462,7 @@ public class CertificateServiceImpl implements CertificateService {
             throw new BadRequestException("The new certificate validity cannot exceed the issuer's validity.");
         }
 
-        verifyDigitalSignature(issuer);
+        verifyCertificateChain(issuer);
         validateExtensions(request);
     }
 
@@ -480,25 +480,67 @@ public class CertificateServiceImpl implements CertificateService {
         }
     }
 
+    private void verifyCertificateChain(Certificate certificate) {
 
-    private void verifyDigitalSignature(Certificate issuer) {
         try {
-            X509Certificate issuerX509 = convertToX509(issuer.getEncodedCertificate());
-            PublicKey publicKeyToVerifyWith;
 
-            if (issuer.getIssuerCertificate() == null) {
-                publicKeyToVerifyWith = issuerX509.getPublicKey();
-            } else {
-                X509Certificate parentX509 = convertToX509(issuer.getIssuerCertificate().getEncodedCertificate());
-                publicKeyToVerifyWith = parentX509.getPublicKey();
+            Certificate current = certificate;
+
+            while (current != null) {
+
+                X509Certificate currentX509 =
+                        convertToX509(current.getEncodedCertificate());
+
+                PublicKey publicKeyToVerifyWith;
+
+                // ROOT self-signed certificate
+                if (current.getIssuerCertificate() == null) {
+
+                    publicKeyToVerifyWith =
+                            currentX509.getPublicKey();
+
+                } else {
+
+                    Certificate parent =
+                            current.getIssuerCertificate();
+
+                    X509Certificate parentX509 =
+                            convertToX509(
+                                    parent.getEncodedCertificate()
+                            );
+
+                    publicKeyToVerifyWith =
+                            parentX509.getPublicKey();
+                }
+
+                currentX509.verify(publicKeyToVerifyWith);
+                System.out.println(
+                        "Verified certificate: "
+                                + currentX509.getSubjectX500Principal()
+                                + " | Issuer: "
+                                + currentX509.getIssuerX500Principal()
+                );
+                // stop after verifying ROOT
+                if (current.getType() == CertificateType.ROOT) {
+                    break;
+                }
+
+                current = current.getIssuerCertificate();
             }
 
-            issuerX509.verify(publicKeyToVerifyWith);
+        } catch (java.security.SignatureException
+                 | java.security.InvalidKeyException e) {
 
-        } catch (java.security.SignatureException | java.security.InvalidKeyException e) {
-            throw new BadRequestException("Issuer digital signature is invalid.");
+            throw new BadRequestException(
+                    "Certificate chain signature is invalid."
+            );
+
         } catch (Exception e) {
-            throw new BadRequestException("Error verifying digital signature: " + e.getMessage());
+
+            throw new BadRequestException(
+                    "Error verifying certificate chain: "
+                            + e.getMessage()
+            );
         }
     }
 
