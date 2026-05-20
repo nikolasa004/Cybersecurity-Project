@@ -123,6 +123,7 @@ public class DataInitializer implements CommandLineRunner {
         admin.setRole(UserRole.ADMIN);
         admin.setActive(true);
         admin.setOrganization(systemOrganization);
+        admin.setTwoFactorEnabled(false);
         userRepository.save(admin);
 
         User caFtn = new User();
@@ -133,6 +134,7 @@ public class DataInitializer implements CommandLineRunner {
         caFtn.setRole(UserRole.CA_USER);
         caFtn.setActive(true);
         caFtn.setOrganization(ftn);
+        caFtn.setTwoFactorEnabled(false);
         userRepository.save(caFtn);
 
         User caNextesy = new User();
@@ -143,6 +145,7 @@ public class DataInitializer implements CommandLineRunner {
         caNextesy.setRole(UserRole.CA_USER);
         caNextesy.setActive(true);
         caNextesy.setOrganization(nextesy);
+        caFtn.setTwoFactorEnabled(false);
         userRepository.save(caNextesy);
 
         User newUser  = new User();
@@ -153,6 +156,7 @@ public class DataInitializer implements CommandLineRunner {
         newUser.setRole(UserRole.USER);
         newUser.setActive(true);
         newUser.setOrganization(systemOrganization);
+        newUser.setTwoFactorEnabled(false);
         userRepository.save(newUser);
 
         User newUser2 = new User();
@@ -163,6 +167,7 @@ public class DataInitializer implements CommandLineRunner {
         newUser2.setRole(UserRole.USER);
         newUser2.setActive(true);
         newUser2.setOrganization(systemOrganization);
+        newUser2.setTwoFactorEnabled(false);
         userRepository.save(newUser2);
 
     }

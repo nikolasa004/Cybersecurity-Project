@@ -15,4 +15,5 @@ public class UserProfileResponse {
     private UserRole role;
     private Long organizationId;
     private String organizationName;
+    private boolean isTwoFactorEnabled;
 }

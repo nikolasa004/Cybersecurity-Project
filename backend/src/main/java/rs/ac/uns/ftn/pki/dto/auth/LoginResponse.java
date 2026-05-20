@@ -8,5 +8,6 @@ public record LoginResponse(
         String refreshToken,
         String role,
         Long organizationId,
-        String organizationName
+        String organizationName,
+        boolean isTwoFactorRequired
 ) {}

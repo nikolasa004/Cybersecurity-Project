@@ -1,18 +1,22 @@
 package rs.ac.uns.ftn.pki.controller.auth;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import rs.ac.uns.ftn.pki.dto.Mfa.MfaVerifyRequest;
 import rs.ac.uns.ftn.pki.dto.auth.*;
 import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.security.JwtService;
 import rs.ac.uns.ftn.pki.security.RefreshTokenService;
+import rs.ac.uns.ftn.pki.service.impl.MfaServiceImpl;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,6 +26,8 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final MfaServiceImpl mfaService;
+    private final UserDetailsService userDetailsService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
@@ -30,6 +36,17 @@ public class AuthController {
         );
 
         User user = (User) authentication.getPrincipal();
+
+        if (user.isTwoFactorEnabled()) {
+            return ResponseEntity.ok(LoginResponse.builder()
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .role(user.getRole().name())
+                    .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
+                    .organizationName(user.getOrganization() != null ? user.getOrganization().getName() : "System Admin")
+                    .isTwoFactorRequired(true)
+                    .build());
+        }
 
         String accessToken = jwtService.generateToken(user);
 
@@ -65,5 +82,35 @@ public class AuthController {
             refreshTokenService.deleteByToken(request.refreshToken());
         }
         return ResponseEntity.ok("Logged out successfully");
+    }
+
+    @PostMapping("/login/verify-2fa")
+    public ResponseEntity<LoginResponse> verifyMfaLogin(@RequestBody MfaVerifyRequest request) {
+        User user = (User) userDetailsService.loadUserByUsername(request.email());
+
+        // Verifikujemo uneti kôd sa telefona koristeći tajni ključ iz baze
+        boolean isCodeValid = mfaService.verifyCode(user.getTwoFactorSecret(), request.code());
+
+        if (!isCodeValid) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // Pogrešan kôd, odbij pristup
+        }
+
+        // Kôd je ispravan! Sada bezbedno generišemo prave tokene za rad
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
+
+        String orgName = "System Admin";
+        if (user.getOrganization() != null) {
+            orgName = user.getOrganization().getName();
+        }
+
+        return ResponseEntity.ok(LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .role(user.getRole().name())
+                .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
+                .organizationName(orgName)
+                .isTwoFactorRequired(false)
+                .build());
     }
 }

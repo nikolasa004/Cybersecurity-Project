@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import rs.ac.uns.ftn.pki.model.enums.UserRole;
+import rs.ac.uns.ftn.pki.security.MfaCryptoConverter;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -57,6 +58,12 @@ public class User implements UserDetails {
     @Column
     private LocalDateTime activationTokenExpiresAt;
 
+    @Column(nullable = false)
+    private boolean isTwoFactorEnabled = false;
+
+    @Column(name = "two_factor_secret")
+    @jakarta.persistence.Convert(converter = MfaCryptoConverter.class)
+    private String twoFactorSecret;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
