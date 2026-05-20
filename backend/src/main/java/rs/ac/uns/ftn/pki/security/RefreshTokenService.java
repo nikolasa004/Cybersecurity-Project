@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import rs.ac.uns.ftn.pki.exception.NotFoundException;
 import rs.ac.uns.ftn.pki.exception.SecurityAlertException;
+import rs.ac.uns.ftn.pki.exception.TokenExpiredException;
 import rs.ac.uns.ftn.pki.model.entity.RefreshToken;
 import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.repository.RefreshTokenRepository;
@@ -25,13 +27,13 @@ public class RefreshTokenService {
 
     public RefreshToken findByToken(String token) {
         return refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Refresh token is not in database!"));
+                .orElseThrow(() -> new NotFoundException("Refresh token is not in database!"));
     }
 
     @Transactional
     public RefreshToken createRefreshToken(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
@@ -46,7 +48,7 @@ public class RefreshTokenService {
     @Transactional(noRollbackFor = SecurityAlertException.class)
     public String rotateToken(String oldToken) {
         RefreshToken token = refreshTokenRepository.findByToken(oldToken)
-                .orElseThrow(() -> new RuntimeException("Token not found!"));
+                .orElseThrow(() -> new NotFoundException("Token not found!"));
 
         if (token.isUsed()) {
             refreshTokenRepository.deleteByUser(token.getUser());
@@ -55,7 +57,7 @@ public class RefreshTokenService {
 
         if (token.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token expired.");
+            throw new TokenExpiredException("Refresh token expired.");
         }
 
         token.setUsed(true);

@@ -7,11 +7,13 @@ import { CertificatesService } from '../../services/certificates.service';
 import { CertificateListItem } from '../../models/certificate-list.model';
 import { AuthService } from '../../../auth/services/auth.service';
 import { CurrentUserService } from '../../../users/services/current-user.service';
+import { saveAs } from 'file-saver';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-admin-certificates-page',
   standalone: true,
-  imports: [CommonModule, AppShell, RouterLink],
+  imports: [CommonModule, AppShell, RouterLink,FormsModule],
   templateUrl: './admin-certificates-page.html',
   styleUrl: './admin-certificates-page.css'
 })
@@ -19,6 +21,13 @@ export class AdminCertificatesPage implements OnInit {
   private certificatesService = inject(CertificatesService);
   private authService = inject(AuthService);
   private currentUserService = inject(CurrentUserService);
+
+  showPasswordModal = false;
+
+  downloadCertificateId: number | null = null;
+  downloadCertificateName = '';
+
+  pkcs12Password = '';
 
   isAdmin = this.authService.getRole() === 'ADMIN';
   navItems = this.isAdmin ? NAVIGATION_BY_ROLE.ADMIN : NAVIGATION_BY_ROLE.CA_USER;
@@ -70,6 +79,76 @@ export class AdminCertificatesPage implements OnInit {
         organization: user.organizationName || (this.isAdmin ? 'System Administration' : 'No organization')
       };
     });
+  }
+
+  
+
+
+  downloadWithKey(
+    certificateId: number,
+    commonName: string
+  ): void {
+
+    this.downloadCertificateId = certificateId;
+    this.downloadCertificateName = commonName;
+
+    this.pkcs12Password = '';
+
+    this.showPasswordModal = true;
+  }
+
+  confirmDownload(): void {
+
+    if (this.downloadCertificateId == null) {
+      return;
+    }
+
+    this.certificatesService
+      .downloadWithKey(
+        this.isAdmin,
+        this.downloadCertificateId,
+        this.pkcs12Password
+      )
+      .subscribe({
+
+        next: (data: ArrayBuffer) => {
+
+          this.downloadCertificate(
+            data,
+            this.downloadCertificateName
+          );
+
+          this.closePasswordModal();
+        },
+
+        error: (err) => {
+
+          this.errorMessage =
+            err?.error?.message
+            || 'Failed to download certificate.';
+
+          this.closePasswordModal();
+        }
+      });
+  }
+
+  closePasswordModal(): void {
+
+    this.showPasswordModal = false;
+
+    this.downloadCertificateId = null;
+
+    this.downloadCertificateName = '';
+
+    this.pkcs12Password = '';
+  }
+
+  private downloadCertificate(data: ArrayBuffer, cn: string): void {
+    const blob = new Blob([data], {
+      type: 'application/x-pkcs12'
+    });
+
+    saveAs(blob, `${cn || 'certificate'}.p12`);
   }
 
   getStatusLabel(status: string): string {

@@ -1,16 +1,15 @@
 package rs.ac.uns.ftn.pki.controller.certificate;
 
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import rs.ac.uns.ftn.pki.dto.certificate.CertificateListResponse;
-import rs.ac.uns.ftn.pki.dto.certificate.IssueCertificateRequest;
-import rs.ac.uns.ftn.pki.dto.certificate.IssuerOptionResponse;
-import rs.ac.uns.ftn.pki.service.CertificateService;
 
-import java.util.List;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import rs.ac.uns.ftn.pki.dto.certificate.*;
+import rs.ac.uns.ftn.pki.service.CertificateService;
 
 @RestController
 @RequestMapping("/api/ca/certificates")
@@ -32,7 +31,16 @@ public class CaCertificateController {
     }
 
     @PostMapping("/issue")
-    public ResponseEntity<CertificateListResponse> issue(@Valid @RequestBody IssueCertificateRequest request) {
+    public ResponseEntity<CertificateResponse> issue(@Valid @RequestBody IssueCertificateRequest request) {
         return ResponseEntity.status(201).body(certificateService.issueCertificateAsCa(request));
+    }
+
+    @PostMapping("/download-with-key/{certificateId}")
+    public ResponseEntity<byte[]> downloadWithKey(@PathVariable Long certificateId, @RequestBody DownloadCertificateRequest request) {
+        byte[] pkcs12 = certificateService.downloadPkcs12WithKey(certificateId, request);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=certificate_" + certificateId + ".p12")
+                .header("Content-Type", "application/x-pkcs12")
+                .body(pkcs12);
     }
 }

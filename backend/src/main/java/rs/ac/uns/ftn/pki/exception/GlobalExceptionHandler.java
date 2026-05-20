@@ -28,6 +28,35 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<?> handleTokenExpired(TokenExpiredException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(CertificateFileReadException.class)
+    public ResponseEntity<?> handleCertificateFile(
+            CertificateFileReadException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "message",
+                        ex.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(CreatePkcs12Exception.class)
+    public ResponseEntity<?> handlePkcs12(
+            CreatePkcs12Exception ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "message",
+                        ex.getMessage()
+                ));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult()

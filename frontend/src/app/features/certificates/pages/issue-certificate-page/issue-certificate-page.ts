@@ -10,6 +10,7 @@ import { OrganizationsService } from '../../../organizations/services/organizati
 import { Organization } from '../../../organizations/models/organization.model';
 import { AuthService } from '../../../auth/services/auth.service';
 import { CurrentUserService } from '../../../users/services/current-user.service';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-issue-certificate-page',
@@ -224,12 +225,33 @@ export class IssueCertificatePage implements OnInit {
         this.submitting = false;
         this.successMessage = `Certificate "${created.subjectCommonName}" issued successfully.`;
         this.resetForm();
+        if (created.certificateData != null && created.certificateData.length > 0) {
+          this.downloadCertificate(created.certificateData!, created.subjectCommonName || `certificate-${created.id}`);
+        }
       },
       error: (err) => {
         this.submitting = false;
         this.errorMessage = err?.error?.message || 'Failed to issue certificate.';
       }
     });
+  }
+
+
+  private downloadCertificate(
+    base64: string,
+     cn: string
+  ): void {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], {
+      type: 'application/x-pkcs12'
+    });
+
+    saveAs(blob, `${cn || 'certificate'}.p12`);
   }
 
   private resetForm(): void {
