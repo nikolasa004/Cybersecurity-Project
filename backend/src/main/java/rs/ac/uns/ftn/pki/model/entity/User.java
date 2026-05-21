@@ -62,8 +62,29 @@ public class User implements UserDetails {
     private boolean isTwoFactorEnabled = false;
 
     @Column(name = "two_factor_secret")
-    @jakarta.persistence.Convert(converter = MfaCryptoConverter.class)
+    @Convert(converter = MfaCryptoConverter.class)
     private String twoFactorSecret;
+    
+    @Column(columnDefinition = "TEXT")
+    private String publicKey;
+
+    @Column(columnDefinition = "TEXT")
+    private String activationChallenge;
+
+    @Column
+    private LocalDateTime activationChallengeExpiresAt;
+
+    @Column
+    private String passwordResetToken;
+
+    @Column
+    private LocalDateTime passwordResetTokenExpiresAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String passwordResetChallenge;
+
+    @Column
+    private LocalDateTime passwordResetChallengeExpiresAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

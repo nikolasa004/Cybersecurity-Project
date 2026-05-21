@@ -16,6 +16,7 @@ import rs.ac.uns.ftn.pki.dto.auth.*;
 import rs.ac.uns.ftn.pki.model.entity.User;
 import rs.ac.uns.ftn.pki.security.JwtService;
 import rs.ac.uns.ftn.pki.security.RefreshTokenService;
+import rs.ac.uns.ftn.pki.service.PublicUserAuthService;
 import rs.ac.uns.ftn.pki.service.impl.MfaServiceImpl;
 
 @RestController
@@ -28,6 +29,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final MfaServiceImpl mfaService;
     private final UserDetailsService userDetailsService;
+    private final PublicUserAuthService publicUserAuthService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
@@ -88,14 +90,12 @@ public class AuthController {
     public ResponseEntity<LoginResponse> verifyMfaLogin(@RequestBody MfaVerifyRequest request) {
         User user = (User) userDetailsService.loadUserByUsername(request.email());
 
-        // Verifikujemo uneti kôd sa telefona koristeći tajni ključ iz baze
         boolean isCodeValid = mfaService.verifyCode(user.getTwoFactorSecret(), request.code());
 
         if (!isCodeValid) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // Pogrešan kôd, odbij pristup
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Kôd je ispravan! Sada bezbedno generišemo prave tokene za rad
         String accessToken = jwtService.generateToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
@@ -112,5 +112,40 @@ public class AuthController {
                 .organizationName(orgName)
                 .isTwoFactorRequired(false)
                 .build());
+    }
+    
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterUserRequest request) {
+        publicUserAuthService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("Registration successful. Check your email for activation link.");
+    }
+
+    @PostMapping("/activation/challenge")
+    public ResponseEntity<ActivationChallengeResponse> createActivationChallenge(@RequestBody ActivationChallengeRequest request) {
+        return ResponseEntity.ok(publicUserAuthService.createActivationChallenge(request));
+    }
+
+    @PostMapping("/activation/complete")
+    public ResponseEntity<?> completeActivation(@RequestBody ActivationCompleteRequest request) {
+        publicUserAuthService.completeActivation(request);
+        return ResponseEntity.ok("Account activated successfully.");
+    }
+
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody ForgotPasswordRequest request) {
+        publicUserAuthService.requestPasswordReset(request);
+        return ResponseEntity.ok("If an account with that email exists, a reset link has been sent.");
+    }
+
+    @PostMapping("/forgot-password/challenge")
+    public ResponseEntity<ActivationChallengeResponse> createPasswordResetChallenge(@RequestBody ForgotPasswordChallengeRequest request) {
+        return ResponseEntity.ok(publicUserAuthService.createPasswordResetChallenge(request));
+    }
+
+    @PostMapping("/forgot-password/complete")
+    public ResponseEntity<?> completePasswordReset(@RequestBody ForgotPasswordCompleteRequest request) {
+        publicUserAuthService.completePasswordReset(request);
+        return ResponseEntity.ok("Password changed successfully.");
     }
 }

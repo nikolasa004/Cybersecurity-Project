@@ -1,6 +1,5 @@
 package rs.ac.uns.ftn.pki.service.impl;
 
-import dev.samstevens.totp.code.CodeVerifier;
 import dev.samstevens.totp.code.DefaultCodeVerifier;
 import dev.samstevens.totp.code.HashingAlgorithm;
 import dev.samstevens.totp.code.DefaultCodeGenerator;

@@ -1,5 +1,6 @@
 package rs.ac.uns.ftn.pki.service.crypto;
 
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -24,7 +25,7 @@ public class X500NameBuilderService {
         return builder.build();
     }
 
-    private void addIfPresent(X500NameBuilder builder, org.bouncycastle.asn1.ASN1ObjectIdentifier oid, String value) {
+    private void addIfPresent(X500NameBuilder builder, ASN1ObjectIdentifier oid, String value) {
         if (value != null && !value.isBlank()) {
             builder.addRDN(oid, value);
         }

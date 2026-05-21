@@ -29,4 +29,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.organization WHERE u.email = :email")
     Optional<User> findByEmailWithOrganization(@Param("email") String email);
+    
+    Optional<User> findByPasswordResetToken(String passwordResetToken);
 }
