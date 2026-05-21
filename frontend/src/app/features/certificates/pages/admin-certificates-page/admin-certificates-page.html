@@ -49,18 +49,25 @@
                     {{ getStatusLabel(certificate.status) }}
                   </span>
                 </div>
-                @if (certificate.type !== 'END_ENTITY') {
-                  <div class="certificate-card__actions">
-                    
-                    <button
-                      class="btn-primary"
-                      (click)="downloadWithKey(certificate.id, certificate.subjectCommonName || `certificate-${certificate.id}`)"
-                    >
-                      Export certificate with key
-                    </button>
-                  
-                  </div>
-                }
+                <div class="certificate-card__actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+  
+                  <button
+                    class="btn-secondary"
+                    style="border: 1px solid var(--color-primary); color: var(--color-primary); background: transparent;"
+                    (click)="downloadPem(certificate.id, certificate.subjectCommonName || 'certificate')"
+                  >
+                    Export certificate
+                  </button>
+
+                  @if (certificate.type !== 'END_ENTITY') {
+                  <button
+                    class="btn-primary"
+                    (click)="downloadWithKey(certificate.id, certificate.subjectCommonName || `certificate-${certificate.id}`)"
+                  >
+                    Export certificate with key
+                  </button>
+                  }
+                </div>
               </div>
 
               <div class="certificate-card__grid">

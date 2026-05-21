@@ -7,4 +7,5 @@ export interface UserProfile {
   role: 'ADMIN' | 'CA_USER' | 'USER';
   organizationId: number | null;
   organizationName: string | null;
+  twoFactorEnabled: boolean;
 }

@@ -51,4 +51,13 @@ public class CertificateController {
         return certificateService.getAllForUser();
     }
 
+    @GetMapping("/download-pem/{id}")
+    public ResponseEntity<java.util.Map<String, String>> downloadPem(@PathVariable Long id) {
+        String pemContent = certificateService.getCertificateAsPem(id);
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+        response.put("pemContent", pemContent);
+        response.put("fileName", "certificate_" + id + ".pem");
+        return ResponseEntity.ok(response);
+    }
+
 }
