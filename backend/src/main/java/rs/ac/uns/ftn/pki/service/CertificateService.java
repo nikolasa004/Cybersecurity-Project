@@ -14,4 +14,5 @@ public interface CertificateService {
     public List<CertificateListResponse> getAllForCa();
     List<CertificateListResponse> getAllForUser();
     public byte[] downloadPkcs12WithKey(Long certificateId, DownloadCertificateRequest request);
+    String getCertificateAsPem(Long certificateId);
 }

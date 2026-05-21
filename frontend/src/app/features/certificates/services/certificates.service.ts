@@ -49,4 +49,16 @@ export class CertificatesService {
       { responseType: 'arraybuffer' }
     );
   }
+
+  downloadPem(certificateId: number, role: 'ADMIN' | 'CA_USER' | 'USER'): Observable<{ pemContent: string; fileName: string }> {
+    let url = `${API_BASE_URL}/user/certificates/download-pem/${certificateId}`;
+    
+    if (role === 'ADMIN') {
+      url = `${this.adminUrl}/download-pem/${certificateId}`;
+    } else if (role === 'CA_USER') {
+      url = `${this.caUrl}/download-pem/${certificateId}`;
+    }
+
+    return this.http.get<{ pemContent: string; fileName: string }>(url);
+  }
 }

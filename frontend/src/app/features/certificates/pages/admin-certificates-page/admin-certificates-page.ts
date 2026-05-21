@@ -151,6 +151,20 @@ export class AdminCertificatesPage implements OnInit {
     saveAs(blob, `${cn || 'certificate'}.p12`);
   }
 
+  downloadPem(certificateId: number, commonName: string): void {
+    const currentRole: 'ADMIN' | 'CA_USER' | 'USER' = this.isAdmin ? 'ADMIN' : 'CA_USER';
+
+    this.certificatesService.downloadPem(certificateId, currentRole).subscribe({
+      next: (response) => {
+        const blob = new Blob([response.pemContent], { type: 'text/plain;charset=utf-8' });
+        saveAs(blob, `${commonName || 'certificate'}.pem`);
+      },
+      error: (err) => {
+        this.errorMessage = err?.error?.message || 'Failed to download .PEM certificate.';
+      }
+    });
+  }
+
   getStatusLabel(status: string): string {
     switch (status) {
       case 'ACTIVE':

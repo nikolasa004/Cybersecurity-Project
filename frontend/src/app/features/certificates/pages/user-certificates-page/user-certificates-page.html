@@ -47,7 +47,35 @@
                 </div>
               </div>
 
-              <div class="certificate-card__grid">
+              <div class="certificate-card__top">
+                <div>
+                  <h2>{{ certificate.subjectCommonName || 'Unnamed subject' }}</h2>
+                  <p>{{ certificate.organizationName || 'No organization' }}</p>
+                </div>
+
+                <div class="certificate-card__badges">
+                  <span class="badge badge--type">{{ getTypeLabel(certificate.type) }}</span>
+                  <span
+                    class="badge"
+                    [class.badge--active]="certificate.status === 'ACTIVE'"
+                    [class.badge--revoked]="certificate.status === 'REVOKED'"
+                    [class.badge--expired]="certificate.status === 'EXPIRED'"
+                  >
+                    {{ getStatusLabel(certificate.status) }}
+                  </span>
+                </div>
+
+                <div class="certificate-card__actions" style="margin-top: 10px;">
+                   <button
+                    class="btn-secondary"
+                    style="border: 1px solid var(--color-primary); color: var(--color-primary); background: transparent; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;"
+                    (click)="downloadPem(certificate.id, certificate.subjectCommonName || 'certificate')"
+                  >
+                    Export certificate
+                  </button>
+                </div>
+              </div>
+
                 <div>
                   <span class="certificate-card__label">Serial number</span>
                   <span class="certificate-card__value">{{ certificate.serialNumber }}</span>
@@ -73,10 +101,8 @@
                   <span class="certificate-card__value">{{ certificate.signatureAlgorithm || 'Not available' }}</span>
                 </div>
               </div>
-            </div>
-          }
-        </div>
-      }
+          }    </div>
+      } 
     </div>
   </section>
 </app-shell>

@@ -5,6 +5,7 @@ import { NAVIGATION_BY_ROLE } from '../../../../core/config/role-navigation';
 import { CertificatesService } from '../../services/certificates.service';
 import { CertificateListItem } from '../../models/certificate-list.model';
 import { AuthService } from '../../../auth/services/auth.service';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-user-certificates-page',
@@ -63,5 +64,17 @@ export class UserCertificatesPage implements OnInit {
       case 'END_ENTITY': return 'End-Entity';
       default: return type;
     }
+  }
+
+  downloadPem(certificateId: number, commonName: string): void {
+    this.certificatesService.downloadPem(certificateId, 'USER').subscribe({
+      next: (response) => {
+        const blob = new Blob([response.pemContent], { type: 'text/plain;charset=utf-8' });
+        saveAs(blob, `${commonName || 'certificate'}.pem`);
+      },
+      error: (err) => {
+        this.errorMessage = err?.error?.message || 'Failed to download .PEM certificate.';
+      }
+    });
   }
 }

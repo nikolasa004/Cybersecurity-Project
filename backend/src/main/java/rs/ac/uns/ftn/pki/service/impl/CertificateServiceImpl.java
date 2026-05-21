@@ -709,6 +709,15 @@ public class CertificateServiceImpl implements CertificateService {
         return createPkcs12(privateKey, certificate, request.getPassword());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public String getCertificateAsPem(Long certificateId) {
+        Certificate certificate = certificateRepository.findById(certificateId)
+                .orElseThrow(() -> new NotFoundException("Certificate not found with id: " + certificateId));
+
+        return readCertificateFromFile(certificate);
+    }
+
 
 
 }
