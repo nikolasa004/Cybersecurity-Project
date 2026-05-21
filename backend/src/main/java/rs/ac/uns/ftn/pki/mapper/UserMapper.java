@@ -18,7 +18,8 @@ public class UserMapper {
                 user.getEmail(),
                 user.getRole(),
                 user.getOrganization() != null ? user.getOrganization().getId() : null,
-                user.getOrganization() != null ? user.getOrganization().getName() : null
+                user.getOrganization() != null ? user.getOrganization().getName() : null,
+                user.isTwoFactorEnabled()
         );
     }
 }

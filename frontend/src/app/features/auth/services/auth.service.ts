@@ -20,13 +20,21 @@ export class AuthService {
   login(credentials: any): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.AUTH_URL}/login`, credentials).pipe(
       tap(response => {
-        this.storeTokens(response);
+        if (!response.isTwoFactorRequired) {
+          this.storeTokens(response);
+        }
       }),
-      switchMap((response) =>
-        this.currentUserService.load(true).pipe(
+      switchMap((response) => {
+        if (response.isTwoFactorRequired) {
+          return new Observable<LoginResponse>(subscriber => {
+            subscriber.next(response);
+            subscriber.complete();
+          });
+        }
+        return this.currentUserService.load(true).pipe(
           map(() => response)
-        )
-      )
+        );
+      })
     );
   }
 
@@ -66,6 +74,19 @@ export class AuthService {
       localStorage.setItem('organizationId', response.organizationId.toString());
       localStorage.setItem('organizationName', response.organizationName || 'System Admin');
     }
+  }
+
+  verify2faLogin(data: { email: string; code: string }): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.AUTH_URL}/login/verify-2fa`, data).pipe(
+      tap(response => {
+        this.storeTokens(response);
+      }),
+      switchMap((response) =>
+        this.currentUserService.load(true).pipe(
+          map(() => response)
+        )
+      )
+    );
   }
 
   getUserOrganizationId(): number | null {

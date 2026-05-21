@@ -4,6 +4,7 @@ export interface LoginResponse {
   role: string;
   organizationId: number | null;
   organizationName?: string;
+  isTwoFactorRequired?: boolean;
 }
 
 export interface TokenRefreshResponse {
