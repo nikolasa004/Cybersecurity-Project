@@ -129,3 +129,20 @@
   margin-top: 0 !important;
   flex: 2;
 }
+
+.auth-links {
+  margin-top: var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.auth-links a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}

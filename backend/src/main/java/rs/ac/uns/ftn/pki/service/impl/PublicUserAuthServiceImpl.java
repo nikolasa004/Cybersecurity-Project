@@ -69,14 +69,13 @@ public class PublicUserAuthServiceImpl implements PublicUserAuthService {
 
         userRepository.save(user);
 
-        String activationLink = frontendUrl + "/activate-user?token=" + token;
-        mailService.sendActivationEmail(user.getEmail(), activationLink);
+        String activationLink = frontendUrl + "/auth/activate-user?token=" + token;
+        mailService.sendActivationEmail(user.getEmail(), activationLink, false);
     }
 
     @Override
     public ActivationChallengeResponse createActivationChallenge(ActivationChallengeRequest request) {
-        User user = userRepository.findByActivationToken(request.getToken())
-                .orElseThrow(() -> new NotFoundException("Invalid activation token."));
+        User user = userRepository.findByActivationToken(request.getToken()).orElseThrow(() -> new NotFoundException("Invalid activation token."));
 
         if (user.getActivationTokenExpiresAt() == null ||
                 user.getActivationTokenExpiresAt().isBefore(LocalDateTime.now())) {
@@ -128,7 +127,7 @@ public class PublicUserAuthServiceImpl implements PublicUserAuthService {
             user.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
             userRepository.save(user);
 
-            String resetLink = frontendUrl + "/forgot-password?token=" + token;
+            String resetLink = frontendUrl + "/auth/forgot-password?token=" + token;
             mailService.sendPasswordResetEmail(user.getEmail(), resetLink);
         });
     }
