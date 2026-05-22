@@ -54,7 +54,7 @@ public class CaUserServiceImpl implements CaUserService {
         User saved = userRepository.save(user);
 
         String activationLink = frontendUrl + "/activate?token=" + token;
-        mailService.sendActivationEmail(saved.getEmail(), activationLink);
+        mailService.sendActivationEmail(saved.getEmail(), activationLink, true);
 
         return caUserMapper.toResponse(saved);
     }

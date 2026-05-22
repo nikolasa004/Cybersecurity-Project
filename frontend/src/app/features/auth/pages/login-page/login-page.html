@@ -23,6 +23,11 @@
         <button type="submit" [disabled]="loginForm.get('email')?.invalid || loginForm.get('password')?.invalid" class="btn-login">
           Login
         </button>
+
+        <div class="auth-links" *ngIf="!isMfaRequired">
+          <a routerLink="/auth/register">Create account</a>
+          <a routerLink="/auth/forgot-password">Forgot password?</a>
+        </div>
       } 
       
       @else {

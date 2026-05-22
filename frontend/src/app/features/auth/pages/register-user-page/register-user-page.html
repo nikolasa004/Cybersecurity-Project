@@ -1,0 +1,144 @@
+<div class="register-page">
+  <div class="register-card">
+    <div class="register-card__header">
+      <h1>Create account</h1>
+    </div>
+
+    @if (errorMessage) {
+      <div class="register-alert register-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="register-alert register-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (!successMessage) {
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <div class="register-form-group">
+            <label for="firstName">First name</label>
+            <input id="firstName" type="text" formControlName="firstName" placeholder="Enter first name" />
+            @if (hasError('firstName', 'required')) {
+              <div class="form-error">First name is required.</div>
+            }
+            @if (hasError('firstName', 'minlength')) {
+              <div class="form-error">First name must have at least 2 characters.</div>
+            }
+          </div>
+
+          <div class="register-form-group">
+            <label for="lastName">Last name</label>
+            <input id="lastName" type="text" formControlName="lastName" placeholder="Enter last name" />
+            @if (hasError('lastName', 'required')) {
+              <div class="form-error">Last name is required.</div>
+            }
+            @if (hasError('lastName', 'minlength')) {
+              <div class="form-error">Last name must have at least 2 characters.</div>
+            }
+          </div>
+
+          <div class="register-form-group register-form-group--full">
+            <label for="email">Email address</label>
+            <input id="email" type="email" formControlName="email" placeholder="Enter email address" />
+            @if (hasError('email', 'required')) {
+              <div class="form-error">Email is required.</div>
+            }
+            @if (hasError('email', 'email')) {
+              <div class="form-error">Please enter a valid email address.</div>
+            }
+          </div>
+
+          <div class="register-form-group register-form-group--full">
+            <label for="organizationId">Organization</label>
+            <select id="organizationId" formControlName="organizationId">
+              <option value="">Select organization</option>
+              @for (organization of organizations; track organization.id) {
+                <option [value]="organization.id">{{ organization.name }}</option>
+              }
+            </select>
+
+            @if (loadingOrganizations) {
+              <div class="form-hint">Loading organizations...</div>
+            }
+
+            @if (hasError('organizationId', 'required')) {
+              <div class="form-error">Organization is required.</div>
+            }
+          </div>
+
+          <div class="register-form-group">
+            <label for="password">Password</label>
+            <input id="password" type="password" formControlName="password" placeholder="Enter password" />
+
+            @if (hasError('password', 'required')) {
+              <div class="form-error">Password is required.</div>
+            }
+            @if (hasError('password', 'passwordTooShort')) {
+              <div class="form-error">Password must have at least 15 characters.</div>
+            }
+            @if (hasError('password', 'passwordTooLong')) {
+              <div class="form-error">Password must not exceed 64 characters.</div>
+            }
+          </div>
+
+          <div class="register-form-group">
+            <label for="confirmPassword">Confirm password</label>
+            <input id="confirmPassword" type="password" formControlName="confirmPassword" placeholder="Repeat password" />
+
+            @if (hasError('confirmPassword', 'required')) {
+              <div class="form-error">Password confirmation is required.</div>
+            }
+            @if (hasFormError('passwordsMismatch')) {
+              <div class="form-error">Passwords do not match.</div>
+            }
+          </div>
+
+          <div class="register-form-group register-form-group--full">
+            <div class="password-help">
+              <div class="password-rules">
+                <div class="password-policy__item" [class.password-policy__item--ok]="passwordLength >= 15">
+                  At least 15 characters
+                </div>
+                <div class="password-policy__item" [class.password-policy__item--ok]="passwordLength <= 64 && passwordLength > 0">
+                  Maximum 64 characters
+                </div>
+              </div>
+
+              <div class="strength-meter">
+                <div class="strength-meter__bar">
+                  <div
+                    class="strength-meter__fill"
+                    [style.width.%]="strengthPercent"
+                    [attr.data-score]="passwordScore"
+                  ></div>
+                </div>
+                <div class="strength-meter__label">
+                  Strength: {{ passwordStrengthLabel }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="register-actions">
+          <button type="button" class="btn-secondary" routerLink="/auth/login">Back to login</button>
+          <button type="submit" class="btn-primary" [disabled]="loading || loadingOrganizations">
+            {{ loading ? 'Creating...' : 'Create account' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    @if (successMessage) {
+      <div class="register-actions register-actions--success">
+        <button type="button" class="btn-primary" (click)="goToLogin()">
+          Go to login
+        </button>
+      </div>
+    }
+  </div>
+</div>

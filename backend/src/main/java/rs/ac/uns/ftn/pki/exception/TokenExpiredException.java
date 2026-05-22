@@ -1,7 +1,9 @@
 package rs.ac.uns.ftn.pki.exception;
 
 public class TokenExpiredException extends RuntimeException {
-    public TokenExpiredException(String message) {
+	private static final long serialVersionUID = 1L;
+
+	public TokenExpiredException(String message) {
         super(message);
     }
 }

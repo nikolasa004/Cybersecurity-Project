@@ -12,6 +12,9 @@ import { LoginPage } from './features/auth/pages/login-page/login-page';
 import { roleGuard } from './core/guards/role.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { UserCertificatesPage } from './features/certificates/pages/user-certificates-page/user-certificates-page';
+import { RegisterUserPage } from './features/auth/pages/register-user-page/register-user-page';
+import { ActivateUserAccountPage } from './features/auth/pages/activate-user-account-page/activate-user-account-page';
+import { ForgotPasswordPage } from './features/auth/pages/forgot-password-page/forgot-password-page';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -20,7 +23,10 @@ export const routes: Routes = [
     path: 'auth',
     component: AuthLayout,
     children: [
-      { path: 'login', component: LoginPage }
+      { path: 'login', component: LoginPage },
+      { path: 'register', component: RegisterUserPage },
+      { path: 'activate-user', component: ActivateUserAccountPage },
+      { path: 'forgot-password', component: ForgotPasswordPage }
     ]
   },
 

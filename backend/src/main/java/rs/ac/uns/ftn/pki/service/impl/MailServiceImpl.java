@@ -20,18 +20,43 @@ public class MailServiceImpl implements MailService {
     private String from;
 
     @Override
-    public void sendActivationEmail(String to, String activationLink) {
+    public void sendActivationEmail(String to, String activationLink, boolean isCa) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         //message.setTo(to);
         message.setTo(from); // For testing purposes, send to self
         message.setSubject("Activate your CA account");
-        message.setText("""
-                Your CA account has been created.
+        if (isCa) {
+	        message.setText("""
+	                Your CA account has been created.
+	
+	                Open the following link to set your password:
+	                %s
+	                """.formatted(activationLink));
+        } else {
+        				message.setText("""
+				Your user account has been created.
 
-                Open the following link to set your password:
+				Open the following link to set your password:
+				%s
+				""".formatted(activationLink));
+        }
+
+        mailSender.send(message);
+    }
+    
+    @Override
+    public void sendPasswordResetEmail(String to, String resetLink) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        //message.setTo(to);
+        message.setTo(from); // For testing purposes, send to self
+        message.setSubject("Reset your password");
+        message.setText("""
+                Open the following link to reset your password:
+
                 %s
-                """.formatted(activationLink));
+                """.formatted(resetLink));
 
         mailSender.send(message);
     }

@@ -1,0 +1,86 @@
+<div class="activation-page">
+  <div class="activation-card">
+    <div class="activation-card__header">
+      <h1>Activate account</h1>
+      <p>Confirm your key pair to activate your user account.</p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="activation-alert activation-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="activation-alert activation-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (!invalidToken && step !== 'done') {
+      <form [formGroup]="activationForm">
+        @if (step === 'publicKey') {
+          <div class="activation-form-group">
+            <label for="publicKey">Public key</label>
+            <textarea
+              id="publicKey"
+              formControlName="publicKey"
+              rows="8"
+              placeholder="Paste your public key here"
+            ></textarea>
+
+            @if (hasError('publicKey', 'required')) {
+              <div class="form-error">Public key is required.</div>
+            }
+          </div>
+
+          <div class="activation-actions">
+            <button type="button" class="btn-secondary" routerLink="/auth/login">Back</button>
+            <button type="button" class="btn-primary" [disabled]="loading" (click)="requestChallenge()">
+              {{ loading ? 'Generating...' : 'Generate challenge' }}
+            </button>
+          </div>
+        }
+
+        @if (step === 'privateKey') {
+          <div class="activation-form-group">
+            <label for="privateKey">Private key</label>
+            <textarea
+              id="privateKey"
+              formControlName="privateKey"
+              rows="10"
+              placeholder="Paste your private key here"
+            ></textarea>
+
+            @if (hasError('privateKey', 'required')) {
+              <div class="form-error">Private key is required.</div>
+            }
+          </div>
+
+          <div class="activation-actions">
+            <button type="button" class="btn-secondary" routerLink="/auth/login">Back</button>
+            <button type="button" class="btn-primary" [disabled]="loading" (click)="decryptAndActivate()">
+              {{ loading ? 'Activating...' : 'Decrypt and activate' }}
+            </button>
+          </div>
+        }
+      </form>
+    }
+
+    @if (step === 'done') {
+      <div class="activation-actions activation-actions--success">
+        <button type="button" class="btn-primary" (click)="goToLogin()">
+          Go to login
+        </button>
+      </div>
+    }
+
+    @if (invalidToken) {
+      <div class="activation-actions activation-actions--success">
+        <button type="button" class="btn-secondary" routerLink="/auth/login">
+          Back to login
+        </button>
+      </div>
+    }
+  </div>
+</div>

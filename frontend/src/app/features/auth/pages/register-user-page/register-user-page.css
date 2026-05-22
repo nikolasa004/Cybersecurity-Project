@@ -1,0 +1,225 @@
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 48px 24px;
+  background: var(--color-bg);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.register-card {
+  width: min(100%, 920px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-md);
+  margin: 0 auto;
+}
+
+.register-card__header {
+  margin-bottom: var(--space-xl);
+}
+
+.register-card__header h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.register-card__header p {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.register-form-group {
+  min-width: 0;
+}
+
+.register-form-group--full {
+  grid-column: 1 / -1;
+}
+
+.register-form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+
+.register-form-group input,
+.register-form-group select {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.register-form-group input:focus,
+.register-form-group select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+
+.password-help {
+  margin-top: 0.25rem;
+}
+
+.password-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.password-policy__item {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.password-policy__item--ok {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.strength-meter {
+  width: 100%;
+}
+
+.strength-meter__bar {
+  width: 100%;
+  height: 10px;
+  background: var(--color-border-soft);
+  border-radius: var(--radius-round);
+  overflow: hidden;
+}
+
+.strength-meter__fill {
+  height: 100%;
+  width: 0;
+  transition: width 0.2s ease;
+  background: var(--color-danger);
+}
+
+.strength-meter__fill[data-score="1"] {
+  background: #ea580c;
+}
+
+.strength-meter__fill[data-score="2"] {
+  background: #ca8a04;
+}
+
+.strength-meter__fill[data-score="3"] {
+  background: #65a30d;
+}
+
+.strength-meter__fill[data-score="4"] {
+  background: var(--color-success);
+}
+
+.strength-meter__label {
+  margin-top: 0.45rem;
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.register-actions {
+  margin-top: var(--space-xl);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+}
+
+.register-actions--success {
+  justify-content: flex-start;
+}
+
+.btn-primary,
+.btn-secondary {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1.2rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.btn-secondary {
+  background: var(--color-border-soft);
+  color: var(--color-text);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.register-alert {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md) 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+
+.register-alert--error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: #fecaca;
+}
+
+.register-alert--success {
+  background: #f0fdf4;
+  color: var(--color-success);
+  border-color: #bbf7d0;
+}
+
+.form-error {
+  margin-top: 0.35rem;
+  color: var(--color-danger);
+  font-size: var(--font-size-md);
+}
+
+.form-hint {
+  margin-top: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-actions {
+    flex-direction: column;
+  }
+
+  .password-rules {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .password-policy__item {
+    white-space: normal;
+  }
+}

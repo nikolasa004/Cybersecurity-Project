@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, switchMap, map, tap } from 'rxjs';
-import { LoginResponse, TokenRefreshResponse } from '../models/auth.model';
+import { LoginResponse, TokenRefreshResponse, RegisterUserRequest } from '../models/auth.model';
 import { Router } from '@angular/router';
 import { CurrentUserService } from '../../users/services/current-user.service';
+import { Organization } from '../../organizations/models/organization.model';
 
 @Injectable({
   providedIn: 'root'
@@ -108,5 +109,13 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return !!this.getAccessToken();
+  }
+
+  register(payload: RegisterUserRequest): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.AUTH_URL}/register`, payload);
+  }
+
+  getAll(): Observable<Organization[]> {
+    return this.http.get<Organization[]>(`${this.AUTH_URL}/organizations`);
   }
 }
