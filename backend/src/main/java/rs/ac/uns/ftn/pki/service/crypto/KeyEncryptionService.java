@@ -126,4 +126,36 @@ public class KeyEncryptionService {
             throw new IllegalStateException("Failed to generate initial master key", e);
         }
     }
+
+    @Transactional
+    public String rotateToNewMasterKey() {
+        int currentVersionNum = Integer.parseInt(currentActiveVersion.substring(1));
+        String newVersion = "v" + (currentVersionNum + 1);
+
+        MasterKeyEntity oldKeyEntity = masterKeyRepository.findById(currentActiveVersion)
+                .orElseThrow(() -> new IllegalStateException("Trenutni ključ nije pronađen u bazi."));
+        oldKeyEntity.setStatus(MasterKeyStatus.ACTIVE_READ_ONLY);
+        masterKeyRepository.save(oldKeyEntity);
+
+        MasterKeyEntity newKeyEntity = generateAndSaveNewMasterKey(newVersion);
+
+        byte[] decryptedKeyBytes = decrypt(newKeyEntity.getEncryptedKey(), rootKek);
+        SecretKey newSecretKey = new SecretKeySpec(decryptedKeyBytes, "AES");
+
+        activeMasterKeysCache.put(newVersion, newSecretKey);
+        this.currentActiveVersion = newVersion;
+
+        return newVersion;
+    }
+
+    @Transactional
+    public void archiveOldMasterKey(String oldVersion) {
+        MasterKeyEntity oldKeyEntity = masterKeyRepository.findById(oldVersion)
+                .orElseThrow(() -> new IllegalStateException("Ključ za arhiviranje nije pronađen."));
+
+        oldKeyEntity.setStatus(MasterKeyStatus.ARCHIVED);
+        masterKeyRepository.save(oldKeyEntity);
+
+        activeMasterKeysCache.remove(oldVersion);
+    }
 }
