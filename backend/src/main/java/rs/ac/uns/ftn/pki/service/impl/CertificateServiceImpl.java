@@ -166,8 +166,8 @@ public class CertificateServiceImpl implements CertificateService {
         Organization organization = resolveOrganization(request.getOrganizationId());
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
-                issuerCertificate.getOrganization().getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKeyByVersion(issuerCertificate.getOrganization().getMasterKeyVersion())
+                organization.getEncryptedOrgKey(),
+                keyEncryptionService.getMasterKeyByVersion(organization.getMasterKeyVersion())
         );
 
         SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
