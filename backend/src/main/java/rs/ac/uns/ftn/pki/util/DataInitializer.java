@@ -106,10 +106,12 @@ public class DataInitializer implements CommandLineRunner {
         SecretKey orgKey = keyEncryptionService.generateOrgKey();
         byte[] encryptedOrgKey = keyEncryptionService.encrypt(
                 orgKey.getEncoded(),
-                keyEncryptionService.getMasterKey()
+                keyEncryptionService.getCurrentActiveMasterKey()
         );
 
         organization.setEncryptedOrgKey(encryptedOrgKey);
+
+        organization.setMasterKeyVersion(keyEncryptionService.getCurrentActiveVersion());
 
         return organizationRepository.save(organization);
     }
@@ -222,7 +224,7 @@ public class DataInitializer implements CommandLineRunner {
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 systemOrganization.getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKey()
+                keyEncryptionService.getMasterKeyByVersion(systemOrganization.getMasterKeyVersion())
         );
 
         SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
@@ -319,7 +321,7 @@ public class DataInitializer implements CommandLineRunner {
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 user.getOrganization().getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKey()
+                keyEncryptionService.getMasterKeyByVersion(user.getOrganization().getMasterKeyVersion())
         );
 
         SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");

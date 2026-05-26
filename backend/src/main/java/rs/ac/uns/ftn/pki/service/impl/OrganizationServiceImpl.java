@@ -38,10 +38,12 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         byte[] encryptedOrgKey = keyEncryptionService.encrypt(
                 orgKey.getEncoded(),
-                keyEncryptionService.getMasterKey()
+                keyEncryptionService.getCurrentActiveMasterKey()
         );
 
         organization.setEncryptedOrgKey(encryptedOrgKey);
+
+        organization.setMasterKeyVersion(keyEncryptionService.getCurrentActiveVersion());
         Organization saved = organizationRepository.save(organization);
 
         return organizationMapper.toResponse(saved);

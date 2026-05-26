@@ -40,4 +40,7 @@ public class Organization {
     @Column(name = "encrypted_org_key", nullable = false)
     private byte[] encryptedOrgKey;
 
+    @Column(name = "master_key_version", nullable = false)
+    private String masterKeyVersion;
+
 }

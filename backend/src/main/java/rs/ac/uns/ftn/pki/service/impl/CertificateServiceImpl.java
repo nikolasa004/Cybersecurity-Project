@@ -123,7 +123,7 @@ public class CertificateServiceImpl implements CertificateService {
 
             byte[] orgKeyBytes = keyEncryptionService.decrypt(
                     issuerCertificate.getOrganization().getEncryptedOrgKey(),
-                    keyEncryptionService.getMasterKey()
+                    keyEncryptionService.getMasterKeyByVersion(issuerCertificate.getOrganization().getMasterKeyVersion())
             );
 
             SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
@@ -166,8 +166,8 @@ public class CertificateServiceImpl implements CertificateService {
         Organization organization = resolveOrganization(request.getOrganizationId());
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
-                organization.getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKey()
+                issuerCertificate.getOrganization().getEncryptedOrgKey(),
+                keyEncryptionService.getMasterKeyByVersion(issuerCertificate.getOrganization().getMasterKeyVersion())
         );
 
         SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
@@ -334,7 +334,7 @@ public class CertificateServiceImpl implements CertificateService {
 
             byte[] orgKeyBytes = keyEncryptionService.decrypt(
                     issuer.getOrganization().getEncryptedOrgKey(),
-                    keyEncryptionService.getMasterKey()
+                    keyEncryptionService.getMasterKeyByVersion(issuer.getOrganization().getMasterKeyVersion())
             );
 
             SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
@@ -387,8 +387,8 @@ public class CertificateServiceImpl implements CertificateService {
         byte[] pkcs12 = null;
         if (request.getType() != CertificateType.END_ENTITY) {
             byte[] orgKeyBytes = keyEncryptionService.decrypt(
-                currentUser.getOrganization().getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKey()
+                    issuer.getOrganization().getEncryptedOrgKey(),
+                    keyEncryptionService.getMasterKeyByVersion(issuer.getOrganization().getMasterKeyVersion())
             );
             SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
             byte[] encryptedPrivateKey = keyEncryptionService.encrypt(
@@ -692,7 +692,7 @@ public class CertificateServiceImpl implements CertificateService {
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 certificate.getOrganization().getEncryptedOrgKey(),
-                keyEncryptionService.getMasterKey()
+                keyEncryptionService.getMasterKeyByVersion(certificate.getOrganization().getMasterKeyVersion())
         );
         SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
         byte[] decryptedKey = keyEncryptionService.decrypt(
