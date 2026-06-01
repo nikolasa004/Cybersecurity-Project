@@ -8,6 +8,9 @@ public class SteganographyApp {
     private final ImageLoader imageLoader = new ImageLoader();
     private final SequentialLsbEncoder sequentialEncoder = new SequentialLsbEncoder();
     private final SequentialLsbDecoder sequentialDecoder = new SequentialLsbDecoder();
+    private final RandomLsbEncoder randomEncoder = new RandomLsbEncoder();
+
+    private final RandomLsbDecoder randomDecoder = new RandomLsbDecoder();
 
     public void run() {
         boolean running = true;
@@ -21,8 +24,8 @@ public class SteganographyApp {
                     case "1" -> embedSequential();
                     case "2" -> extractSequential();
                     case "3" -> showCapacity();
-                    case "4" -> embedRandomPlaceholder();
-                    case "5" -> extractRandomPlaceholder();
+                    case "4" -> embedRandom();
+                    case "5" -> extractRandom();
                     case "0" -> {
                         running = false;
                         System.out.println("Exiting application.");
@@ -46,8 +49,8 @@ public class SteganographyApp {
         System.out.println("1. Embed message using Sequential LSB");
         System.out.println("2. Extract message using Sequential LSB");
         System.out.println("3. Show image capacity");
-        System.out.println("4. Embed message using Random LSB (not implemented)");
-        System.out.println("5. Extract message using Random LSB (not implemented)");
+        System.out.println("4. Embed message using Random LSB");
+        System.out.println("5. Extract message using Random LSB");
         System.out.println("0. Exit");
         System.out.print("Choose an option: ");
     }
@@ -111,13 +114,102 @@ public class SteganographyApp {
         System.out.println("Maximum message bytes/characters (approx. ASCII): " + maxBytes);
     }
 
-    private void embedRandomPlaceholder() {
-        System.out.println("Random LSB embed is not implemented yet.");
-        System.out.println("This part is left for the second team member.");
-    }
+    private void embedRandom() throws Exception {
 
-    private void extractRandomPlaceholder() {
-        System.out.println("Random LSB extract is not implemented yet.");
-        System.out.println("This part is left for the second team member.");
+        System.out.print("Enter input PNG image path: ");
+        String inputPath = scanner.nextLine().trim();
+
+        BufferedImage inputImage =
+                imageLoader.loadPng(inputPath);
+
+        long maxChars =
+                CapacityCalculator.getMaxMessageBytes(
+                        inputImage
+                );
+
+        System.out.println(
+                "Maximum message size for this image: "
+                        + maxChars
+                        + " bytes/characters"
+        );
+
+        System.out.print("Enter message to hide: ");
+        String message = scanner.nextLine();
+
+        if (message.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Message cannot be empty."
+            );
+        }
+
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        if (password.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Password cannot be empty."
+            );
+        }
+
+        System.out.print("Enter output PNG image path: ");
+        String outputPath = scanner.nextLine().trim();
+
+        BufferedImage stegoImage =
+                randomEncoder.encode(
+                        inputImage,
+                        message,
+                        password
+                );
+
+        imageLoader.savePng(
+                stegoImage,
+                outputPath
+        );
+
+        System.out.println(
+                "Message successfully embedded."
+        );
+
+        System.out.println(
+                "Stego image saved to: "
+                        + Path.of(outputPath)
+                        .toAbsolutePath()
+        );
+    }
+    private void extractRandom() throws Exception {
+
+        System.out.print(
+                "Enter stego PNG image path: "
+        );
+
+        String inputPath =
+                scanner.nextLine().trim();
+
+        BufferedImage image =
+                imageLoader.loadPng(inputPath);
+
+        System.out.print("Enter password: ");
+        String password =
+                scanner.nextLine();
+
+        String message =
+                randomDecoder.decode(
+                        image,
+                        password
+                );
+
+        System.out.println(
+                "Extracted message:"
+        );
+
+        System.out.println(
+                "------------------------------------"
+        );
+
+        System.out.println(message);
+
+        System.out.println(
+                "------------------------------------"
+        );
     }
 }
