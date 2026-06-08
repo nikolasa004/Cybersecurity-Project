@@ -24,7 +24,9 @@ public class CertificateMapper {
                 certificate.isCa(),
                 certificate.getValidFrom(),
                 certificate.getValidTo(),
-                certificate.getSignatureAlgorithm()
+                certificate.getSignatureAlgorithm(),
+                certificate.getRevocationReason(),
+				certificate.getRevokedAt()
         );
     }
 

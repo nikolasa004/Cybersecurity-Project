@@ -47,6 +47,12 @@
   border-color: #fecaca;
 }
 
+.certificates-alert--success {
+  background: #f0fdf4;
+  color: var(--color-success);
+  border-color: #bbf7d0;
+}
+
 .certificates-panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border-soft);
@@ -150,62 +156,58 @@
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
-  font-size:14px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
-
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-
   z-index: 1000;
 }
 
 .password-modal {
-  width: 400px;
-  max-width: 90vw;
-
+  width: 420px;
+  max-width: 92vw;
   background: white;
-
   border-radius: 16px;
-
   padding: 24px;
-
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
 .password-modal h3 {
   margin-top: 0;
 }
 
-.password-modal input {
+.password-modal input,
+.revoke-modal__select {
   width: 100%;
-
   margin-top: 12px;
-
   padding: 12px;
-
   border-radius: 8px;
-
   border: 1px solid #d0d7de;
+}
+
+.revoke-modal__label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
 }
 
 .password-modal__actions {
   margin-top: 20px;
-
   display: flex;
   justify-content: flex-end;
-
   gap: 12px;
 }
 
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-danger {
   border: none;
   border-radius: var(--radius-sm);
   padding: 0.9rem 1.2rem;
@@ -215,13 +217,22 @@
 }
 
 .btn-primary:hover,
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-danger:hover {
   opacity: 0.96;
 }
 
 .btn-primary:active,
-.btn-secondary:active {
+.btn-secondary:active,
+.btn-danger:active {
   transform: translateY(1px);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -232,6 +243,17 @@
 .btn-secondary {
   background: var(--color-border-soft);
   color: var(--color-text);
+}
+
+.btn-secondary--outline {
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  background: transparent;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
 }
 
 @media (max-width: 900px) {

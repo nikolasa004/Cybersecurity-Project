@@ -22,4 +22,6 @@ public class CertificateListResponse {
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
     private String signatureAlgorithm;
+    private String revocationReason;
+    private LocalDateTime revokedAt;
 }
