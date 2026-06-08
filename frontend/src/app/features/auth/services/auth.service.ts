@@ -10,7 +10,7 @@ import { Organization } from '../../organizations/models/organization.model';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly AUTH_URL = 'http://localhost:8081/api/auth';
+  private readonly AUTH_URL = 'https://localhost:8443/api/auth';
 
   private userSubject = new BehaviorSubject<any>(null);
 
