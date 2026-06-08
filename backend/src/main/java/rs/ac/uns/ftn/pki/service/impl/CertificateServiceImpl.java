@@ -108,8 +108,12 @@ public class CertificateServiceImpl implements CertificateService {
 
         Certificate issuerCertificate = resolveIssuerCertificate(request);
         validateIssuerIfNeeded(issuerCertificate, request);
+        
+        Organization organization = resolveOrganization(request.getOrganizationId());
 
         X500SubjectData subjectData = certificateSubjectMapper.fromIssueRequest(request);
+        subjectData.setOrganization(organization.getName());
+
         X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
 
         KeyPair subjectKeyPair = keyPairGeneratorService.generateRsaKeyPair();
@@ -175,8 +179,6 @@ public class CertificateServiceImpl implements CertificateService {
                 crlUrl,
                 ocspUrl
         );
-
-        Organization organization = resolveOrganization(request.getOrganizationId());
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 organization.getEncryptedOrgKey(),
