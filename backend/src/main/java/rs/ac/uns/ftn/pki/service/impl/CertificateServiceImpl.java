@@ -22,6 +22,7 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import lombok.RequiredArgsConstructor;
 import rs.ac.uns.ftn.pki.dto.certificate.*;
@@ -64,6 +65,8 @@ public class CertificateServiceImpl implements CertificateService {
     private final CertificateGeneratorService certificateGeneratorService;
     private final AuthService authService;
 
+    @Value("${app.public-base-url:https://localhost:8443}")
+    private String publicBaseUrl;
 
     @Override
     @Transactional(readOnly = true)
@@ -93,6 +96,7 @@ public class CertificateServiceImpl implements CertificateService {
                         LocalDateTime.now()
                 )
                 .stream()
+                .filter(this::isChainUsableForIssuing)
                 .map(certificateMapper::toIssuerOptionResponse)
                 .toList();
     }
@@ -104,8 +108,12 @@ public class CertificateServiceImpl implements CertificateService {
 
         Certificate issuerCertificate = resolveIssuerCertificate(request);
         validateIssuerIfNeeded(issuerCertificate, request);
+        
+        Organization organization = resolveOrganization(request.getOrganizationId());
 
         X500SubjectData subjectData = certificateSubjectMapper.fromIssueRequest(request);
+        subjectData.setOrganization(organization.getName());
+
         X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
 
         KeyPair subjectKeyPair = keyPairGeneratorService.generateRsaKeyPair();
@@ -146,6 +154,13 @@ public class CertificateServiceImpl implements CertificateService {
         }
 
         BigInteger serialNumber = generateSerialNumber();
+        
+        String crlIssuerSerial = request.getType() == CertificateType.ROOT
+                ? serialNumber.toString()
+                : issuerCertificate.getSerialNumber();
+
+        String crlUrl = buildCrlUrl(crlIssuerSerial);
+        String ocspUrl = buildOcspUrl(serialNumber.toString());
 
         X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
                 issuerX500Name,
@@ -160,10 +175,10 @@ public class CertificateServiceImpl implements CertificateService {
                 request.isDigitalSignature(),
                 request.isKeyEncipherment(),
                 request.getSubjectAlternativeName(),
-                "SHA256withRSA"
+                "SHA256withRSA",
+                crlUrl,
+                ocspUrl
         );
-
-        Organization organization = resolveOrganization(request.getOrganizationId());
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 organization.getEncryptedOrgKey(),
@@ -305,6 +320,7 @@ public class CertificateServiceImpl implements CertificateService {
                         LocalDateTime.now()
                 )
                 .stream()
+                .filter(this::isChainUsableForIssuing)
                 .map(certificateMapper::toIssuerOptionResponse)
                 .toList();
     }
@@ -355,6 +371,10 @@ public class CertificateServiceImpl implements CertificateService {
         }
 
         BigInteger serialNumber = generateSerialNumber();
+        
+        String crlUrl = buildCrlUrl(issuer.getSerialNumber());
+        String ocspUrl = buildOcspUrl(serialNumber.toString());
+        
         X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
                 issuerX500Name,
                 issuerPrivateKey,
@@ -368,7 +388,9 @@ public class CertificateServiceImpl implements CertificateService {
                 request.isDigitalSignature(),
                 request.isKeyEncipherment(),
                 request.getSubjectAlternativeName(),
-                "SHA256withRSA"
+                "SHA256withRSA",
+                crlUrl,
+                ocspUrl
         );
 
         Certificate certificate = certificateEntityFactory.create(
@@ -482,6 +504,10 @@ public class CertificateServiceImpl implements CertificateService {
             Certificate current = certificate;
 
             while (current != null) {
+            	
+            	if (current.getStatus() == CertificateStatus.REVOKED) {
+            	    throw new BadRequestException("Certificate chain contains a revoked certificate.");
+            	}
 
                 X509Certificate currentX509 =
                         convertToX509(current.getEncodedCertificate());
@@ -678,6 +704,10 @@ public class CertificateServiceImpl implements CertificateService {
     public byte[] downloadPkcs12WithKey(Long certificateId, DownloadCertificateRequest request) {
         Certificate certificate = certificateRepository.findById(certificateId)
                 .orElseThrow(() -> new NotFoundException("Certificate not found."));
+        
+        if (certificate.getStatus() == CertificateStatus.REVOKED) {
+            throw new BadRequestException("Private key export is not allowed for revoked certificates.");
+        }
 
         if (certificate.getType() == CertificateType.END_ENTITY) {
             throw new BadRequestException("Download with private key is not allowed for End Entity certificates.");
@@ -718,6 +748,127 @@ public class CertificateServiceImpl implements CertificateService {
         return readCertificateFromFile(certificate);
     }
 
+    private String buildCrlUrl(String issuerSerialNumber) {
+        return publicBaseUrl + "/api/revocation/crl/" + issuerSerialNumber;
+    }
 
+    private String buildOcspUrl(String serialNumber) {
+        return publicBaseUrl + "/api/revocation/ocsp/" + serialNumber;
+    }
 
+    private boolean isChainUsableForIssuing(Certificate certificate) {
+        Certificate current = certificate;
+
+        while (current != null) {
+            if (current.getStatus() != CertificateStatus.ACTIVE) {
+                return false;
+            }
+            current = current.getIssuerCertificate();
+        }
+
+        return true;
+    }
+
+    private void ensureCertificateCanBeRevoked(Certificate certificate) {
+        if (certificate.getStatus() == CertificateStatus.REVOKED) {
+            throw new BadRequestException("Certificate is already revoked.");
+        }
+
+        if (certificate.getStatus() != CertificateStatus.ACTIVE) {
+            throw new BadRequestException("Only active certificates can be revoked.");
+        }
+    }
+
+    private void applyRevocation(Certificate certificate, RevokeCertificateRequest request) {
+        ensureCertificateCanBeRevoked(certificate);
+        certificate.setStatus(CertificateStatus.REVOKED);
+        certificate.setRevokedAt(LocalDateTime.now());
+        certificate.setRevocationReason(request.getReason().name());
+        certificateRepository.save(certificate);
+    }
+
+    @Override
+    @Transactional
+    public void revokeCertificateAsAdmin(Long certificateId, RevokeCertificateRequest request) {
+        Certificate certificate = certificateRepository.findWithIssuerCertificateById(certificateId)
+                .orElseThrow(() -> new NotFoundException("Certificate not found."));
+
+        applyRevocation(certificate, request);
+    }
+
+    @Override
+    @Transactional
+    public void revokeCertificateAsCa(Long certificateId, RevokeCertificateRequest request) {
+        User currentUser = authService.getLoggedInUser();
+
+        Certificate certificate = certificateRepository.findWithIssuerCertificateById(certificateId)
+                .orElseThrow(() -> new NotFoundException("Certificate not found."));
+
+        if (certificate.getOrganization() == null ||
+                !certificate.getOrganization().getId().equals(currentUser.getOrganization().getId())) {
+            throw new BadRequestException("You can revoke only certificates from your organization.");
+        }
+
+        applyRevocation(certificate, request);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CrlResponse getCrl(String issuerSerialNumber) {
+        List<CrlEntryResponse> entries = certificateRepository.findRevokedByIssuerSerialNumber(issuerSerialNumber)
+                .stream()
+                .map(c -> new CrlEntryResponse(
+                        c.getSerialNumber(),
+                        c.getRevocationReason(),
+                        c.getRevokedAt()
+                ))
+                .toList();
+
+        return new CrlResponse(issuerSerialNumber, entries);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OcspStatusResponse getOcspStatus(String serialNumber) {
+        Certificate certificate = certificateRepository.findBySerialNumber(serialNumber)
+                .orElse(null);
+
+        if (certificate == null) {
+            return new OcspStatusResponse(serialNumber, "UNKNOWN", null, null);
+        }
+
+        if (certificate.getStatus() == CertificateStatus.REVOKED) {
+            return new OcspStatusResponse(
+                    serialNumber,
+                    "REVOKED",
+                    certificate.getRevokedAt(),
+                    certificate.getRevocationReason()
+            );
+        }
+
+        return new OcspStatusResponse(serialNumber, "GOOD", null, null);
+    }
+    
+    @Override
+    @Transactional
+    public void revokeCertificateAsUser(Long certificateId, RevokeCertificateRequest request) {
+        User currentUser = authService.getLoggedInUser();
+
+        Certificate certificate = certificateRepository.findWithIssuerCertificateById(certificateId)
+                .orElseThrow(() -> new NotFoundException("Certificate not found."));
+
+        if (certificate.getSubjectData() == null || certificate.getSubjectData().getEmail() == null) {
+            throw new BadRequestException("Certificate is not linked to a user.");
+        }
+
+        if (!certificate.getSubjectData().getEmail().equalsIgnoreCase(currentUser.getEmail())) {
+            throw new BadRequestException("You can revoke only your own certificates.");
+        }
+
+        if (certificate.getType() != CertificateType.END_ENTITY) {
+            throw new BadRequestException("Ordinary users can revoke only end-entity certificates.");
+        }
+
+        applyRevocation(certificate, request);
+    }
 }

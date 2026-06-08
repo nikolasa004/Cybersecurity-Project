@@ -12,6 +12,7 @@ import rs.ac.uns.ftn.pki.model.enums.CertificateType;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
@@ -44,4 +45,14 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     @EntityGraph(attributePaths = {"issuerCertificate", "organization"})
     List<Certificate> findAllBySubjectDataEmailOrderByCreatedAtDesc(String email);
+
+    Optional<Certificate> findBySerialNumber(String serialNumber);
+
+    @EntityGraph(attributePaths = {"issuerCertificate", "organization"})
+    Optional<Certificate> findWithIssuerCertificateById(Long id);
+
+    @Query("SELECT c FROM Certificate c WHERE c.issuerCertificate.serialNumber = :issuerSerialNumber " +
+            "AND c.status = rs.ac.uns.ftn.pki.model.enums.CertificateStatus.REVOKED " +
+            "ORDER BY c.revokedAt DESC")
+    List<Certificate> findRevokedByIssuerSerialNumber(@Param("issuerSerialNumber") String issuerSerialNumber);
 }

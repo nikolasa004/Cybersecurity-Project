@@ -1,11 +1,8 @@
 package rs.ac.uns.ftn.pki.service.crypto;
 
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.GeneralNames;
-import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -42,7 +39,9 @@ public class CertificateGeneratorService {
             boolean digitalSignature,
             boolean keyEncipherment,
             String subjectAlternativeName,
-            String signatureAlgorithm
+            String signatureAlgorithm,
+            String crlDistributionPointUrl,
+            String ocspUrl
     ) {
         try {
             X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
@@ -68,12 +67,27 @@ public class CertificateGeneratorService {
             }
 
             certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(usage));
-            
-            if (subjectAlternativeName != null && !subjectAlternativeName.isEmpty()) {
-				GeneralNames subjectAltName = new GeneralNames(new GeneralName(GeneralName.dNSName, subjectAlternativeName));
-				
-				certBuilder.addExtension(Extension.subjectAlternativeName, false, subjectAltName);
-			}
+
+            if (subjectAlternativeName != null && !subjectAlternativeName.isBlank()) {
+                GeneralNames subjectAltName = new GeneralNames(new GeneralName(GeneralName.dNSName, subjectAlternativeName));
+                
+                certBuilder.addExtension(Extension.subjectAlternativeName, false, subjectAltName);
+            }
+
+            if (crlDistributionPointUrl != null && !crlDistributionPointUrl.isBlank()) {
+                DistributionPointName distributionPointName = new DistributionPointName(new GeneralNames(new GeneralName(GeneralName.uniformResourceIdentifier, crlDistributionPointUrl)));
+                DistributionPoint distributionPoint = new DistributionPoint(distributionPointName, null, null);
+                CRLDistPoint crlDistPoint = new CRLDistPoint(new DistributionPoint[]{distributionPoint});
+                
+                certBuilder.addExtension(Extension.cRLDistributionPoints, false, crlDistPoint);
+            }
+
+            if (ocspUrl != null && !ocspUrl.isBlank()) {
+                AccessDescription ocspAccess = new AccessDescription(AccessDescription.id_ad_ocsp, new GeneralName(GeneralName.uniformResourceIdentifier, ocspUrl));
+                AuthorityInformationAccess aia = AuthorityInformationAccess.getInstance(new DERSequence(ocspAccess));
+                
+                certBuilder.addExtension(Extension.authorityInfoAccess, false, aia);
+            }
 
             ContentSigner signer = new JcaContentSignerBuilder(signatureAlgorithm)
                     .setProvider("BC")

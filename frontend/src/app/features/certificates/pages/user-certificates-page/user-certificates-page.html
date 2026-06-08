@@ -19,6 +19,12 @@
       </div>
     }
 
+    @if (successMessage) {
+      <div class="certificates-alert certificates-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
     <div class="certificates-panel">
       @if (loading) {
         <p>Loading certificates...</p>
@@ -47,35 +53,7 @@
                 </div>
               </div>
 
-              <div class="certificate-card__top">
-                <div>
-                  <h2>{{ certificate.subjectCommonName || 'Unnamed subject' }}</h2>
-                  <p>{{ certificate.organizationName || 'No organization' }}</p>
-                </div>
-
-                <div class="certificate-card__badges">
-                  <span class="badge badge--type">{{ getTypeLabel(certificate.type) }}</span>
-                  <span
-                    class="badge"
-                    [class.badge--active]="certificate.status === 'ACTIVE'"
-                    [class.badge--revoked]="certificate.status === 'REVOKED'"
-                    [class.badge--expired]="certificate.status === 'EXPIRED'"
-                  >
-                    {{ getStatusLabel(certificate.status) }}
-                  </span>
-                </div>
-
-                <div class="certificate-card__actions" style="margin-top: 10px;">
-                   <button
-                    class="btn-secondary"
-                    style="border: 1px solid var(--color-primary); color: var(--color-primary); background: transparent; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;"
-                    (click)="downloadPem(certificate.id, certificate.subjectCommonName || 'certificate')"
-                  >
-                    Export certificate
-                  </button>
-                </div>
-              </div>
-
+              <div class="certificate-card__grid">
                 <div>
                   <span class="certificate-card__label">Serial number</span>
                   <span class="certificate-card__value">{{ certificate.serialNumber }}</span>
@@ -100,9 +78,84 @@
                   <span class="certificate-card__label">Signature algorithm</span>
                   <span class="certificate-card__value">{{ certificate.signatureAlgorithm || 'Not available' }}</span>
                 </div>
+
+                @if (certificate.status === 'REVOKED') {
+                  <div>
+                    <span class="certificate-card__label">Revoked at</span>
+                    <span class="certificate-card__value">
+                      {{ certificate.revokedAt ? (certificate.revokedAt | date:'medium') : 'Not available' }}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span class="certificate-card__label">Revocation reason</span>
+                    <span class="certificate-card__value">
+                      {{ certificate.revocationReason || 'Not available' }}
+                    </span>
+                  </div>
+                }
               </div>
-          }    </div>
-      } 
+
+              <div class="certificate-card__actions">
+                <button
+                  class="btn-secondary btn-secondary--outline"
+                  (click)="downloadPem(certificate.id, certificate.subjectCommonName || 'certificate')"
+                >
+                  Export certificate
+                </button>
+
+                <button
+                  class="btn-danger"
+                  (click)="openRevokeModal(certificate)"
+                  [disabled]="!canRevoke(certificate)"
+                >
+                  Revoke
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
   </section>
+
+  @if (showRevokeModal) {
+    <div class="modal-backdrop">
+      <div class="password-modal">
+        <h3>Revoke certificate</h3>
+
+        <p>
+          You are about to revoke <strong>{{ revokeCertificateName }}</strong>.
+          Please choose a revocation reason.
+        </p>
+
+        <label class="revoke-modal__label" for="revokeReason">Revocation reason</label>
+        <select id="revokeReason" [(ngModel)]="revokeReason" class="revoke-modal__select">
+          @for (option of revokeReasonOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+
+        <div class="password-modal__actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closeRevokeModal()"
+            [disabled]="revoking"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="btn-danger"
+            (click)="confirmRevoke()"
+            [disabled]="revoking"
+          >
+            {{ revoking ? 'Revoking...' : 'Confirm revoke' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </app-shell>

@@ -2,6 +2,7 @@ package rs.ac.uns.ftn.pki.util;
 
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,9 @@ public class DataInitializer implements CommandLineRunner {
     private final X500NameBuilderService x500NameBuilderService;
     private final CertificateGeneratorService certificateGeneratorService;
     private final KeyEncryptionService keyEncryptionService;
+
+    @Value("${app.public-base-url:https://localhost:8443}")
+    private String publicBaseUrl;
 
     @Override
     @Transactional
@@ -110,7 +114,6 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         organization.setEncryptedOrgKey(encryptedOrgKey);
-
         organization.setMasterKeyVersion(keyEncryptionService.getCurrentActiveVersion());
 
         return organizationRepository.save(organization);
@@ -147,10 +150,10 @@ public class DataInitializer implements CommandLineRunner {
         caNextesy.setRole(UserRole.CA_USER);
         caNextesy.setActive(true);
         caNextesy.setOrganization(nextesy);
-        caFtn.setTwoFactorEnabled(false);
+        caNextesy.setTwoFactorEnabled(false);
         userRepository.save(caNextesy);
 
-        User newUser  = new User();
+        User newUser = new User();
         newUser.setFirstName("Nikola");
         newUser.setLastName("Bjelica");
         newUser.setEmail("user1@pki.com");
@@ -171,7 +174,6 @@ public class DataInitializer implements CommandLineRunner {
         newUser2.setOrganization(systemOrganization);
         newUser2.setTwoFactorEnabled(false);
         userRepository.save(newUser2);
-
     }
 
     private void generateSystemRoot(Organization systemOrganization) {
@@ -188,6 +190,9 @@ public class DataInitializer implements CommandLineRunner {
         Date validFrom = new Date();
         Date validTo = new Date(System.currentTimeMillis() + (10L * 365 * 24 * 60 * 60 * 1000));
 
+        String crlUrl = buildCrlUrl(serialNumber.toString());
+        String ocspUrl = buildOcspUrl(serialNumber.toString());
+
         X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
                 subjectX500Name,
                 keyPair.getPrivate(),
@@ -201,7 +206,9 @@ public class DataInitializer implements CommandLineRunner {
                 true,
                 false,
                 "Alternative Names",
-                "SHA256withRSA"
+                "SHA256withRSA",
+                crlUrl,
+                ocspUrl
         );
 
         Certificate rootCertificate = new Certificate();
@@ -219,6 +226,9 @@ public class DataInitializer implements CommandLineRunner {
         rootCertificate.setEncodedCertificate(toPem(x509Certificate));
         rootCertificate.setOrganization(systemOrganization);
         rootCertificate.setIssuerCertificate(null);
+        rootCertificate.setSignatureAlgorithm("SHA256withRSA");
+        rootCertificate.setIssuerCommonNameSnapshot(subjectData.getCommonName());
+        rootCertificate.setSubjectAlternativeName("Alternative Names");
 
         Certificate savedRoot = certificateRepository.save(rootCertificate);
 
@@ -242,18 +252,6 @@ public class DataInitializer implements CommandLineRunner {
         privateKeyRepository.save(privateKeyEntity);
     }
 
-    private String toPem(X509Certificate certificate) {
-        try {
-            String base64 = Base64.getMimeEncoder(64, "\n".getBytes())
-                    .encodeToString(certificate.getEncoded());
-
-            return "-----BEGIN CERTIFICATE-----\n"
-                    + base64
-                    + "\n-----END CERTIFICATE-----";
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to encode certificate to PEM.", e);
-        }
-    }
     private void generateEndEntityCertificates() {
         User user1 = userRepository.findByEmail("user1@pki.com").orElseThrow();
         User user2 = userRepository.findByEmail("user2@pki.com").orElseThrow();
@@ -263,13 +261,11 @@ public class DataInitializer implements CommandLineRunner {
                 .findFirst()
                 .orElseThrow();
 
-        // 2 certifikata za user1
         createEndEntityCert(user1, root);
         createEndEntityCert(user1, root);
-
-        // 1 za user2
         createEndEntityCert(user2, root);
     }
+
     private void createEndEntityCert(User user, Certificate issuerCert) {
         X500SubjectData subjectData = new X500SubjectData();
         subjectData.setCommonName(user.getFirstName() + " " + user.getLastName());
@@ -278,6 +274,7 @@ public class DataInitializer implements CommandLineRunner {
         subjectData.setEmail(user.getEmail());
 
         X500Name subjectX500Name = x500NameBuilderService.build(subjectData);
+        X500Name issuerX500Name = x500NameBuilderService.build(issuerCert.getSubjectData());
 
         KeyPair keyPair = keyPairGeneratorService.generateRsaKeyPair();
         BigInteger serialNumber = BigInteger.valueOf(System.nanoTime()).abs();
@@ -285,10 +282,13 @@ public class DataInitializer implements CommandLineRunner {
         Date validFrom = new Date();
         Date validTo = new Date(System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000));
 
+        String crlUrl = buildCrlUrl(issuerCert.getSerialNumber());
+        String ocspUrl = buildOcspUrl(serialNumber.toString());
+
         X509Certificate x509Certificate = certificateGeneratorService.generateCertificate(
-                subjectX500Name,
+                issuerX500Name,
                 keyPair.getPrivate(),
-                x500NameBuilderService.build(issuerCert.getSubjectData()),
+                subjectX500Name,
                 keyPair.getPublic(),
                 serialNumber,
                 validFrom,
@@ -298,7 +298,9 @@ public class DataInitializer implements CommandLineRunner {
                 true,
                 true,
                 null,
-                "SHA256withRSA"
+                "SHA256withRSA",
+                crlUrl,
+                ocspUrl
         );
 
         Certificate cert = new Certificate();
@@ -316,6 +318,8 @@ public class DataInitializer implements CommandLineRunner {
         cert.setEncodedCertificate(toPem(x509Certificate));
         cert.setOrganization(user.getOrganization());
         cert.setIssuerCertificate(issuerCert);
+        cert.setSignatureAlgorithm("SHA256withRSA");
+        cert.setIssuerCommonNameSnapshot(issuerCert.getSubjectData().getCommonName());
 
         Certificate saved = certificateRepository.save(cert);
 
@@ -340,4 +344,24 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("CREATED CERT FOR: " + user.getEmail());
     }
 
+    private String buildCrlUrl(String issuerSerialNumber) {
+        return publicBaseUrl + "/api/revocation/crl/" + issuerSerialNumber;
+    }
+
+    private String buildOcspUrl(String serialNumber) {
+        return publicBaseUrl + "/api/revocation/ocsp/" + serialNumber;
+    }
+
+    private String toPem(X509Certificate certificate) {
+        try {
+            String base64 = Base64.getMimeEncoder(64, "\n".getBytes())
+                    .encodeToString(certificate.getEncoded());
+
+            return "-----BEGIN CERTIFICATE-----\n"
+                    + base64
+                    + "\n-----END CERTIFICATE-----";
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encode certificate to PEM.", e);
+        }
+    }
 }
