@@ -9,10 +9,18 @@ public interface CertificateService {
     List<CertificateListResponse> getAllForAdmin();
     List<IssuerOptionResponse> getAvailableIssuers(CertificateType targetType);
     CertificateResponse issueCertificate(IssueCertificateRequest request);
+    
     List<IssuerOptionResponse> getAvailableIssuersForCa();
     CertificateResponse issueCertificateAsCa(IssueCertificateRequest request);
     public List<CertificateListResponse> getAllForCa();
+    
     List<CertificateListResponse> getAllForUser();
     public byte[] downloadPkcs12WithKey(Long certificateId, DownloadCertificateRequest request);
     String getCertificateAsPem(Long certificateId);
+    
+    void revokeCertificateAsAdmin(Long certificateId, RevokeCertificateRequest request);
+    void revokeCertificateAsCa(Long certificateId, RevokeCertificateRequest request);
+    void revokeCertificateAsUser(Long certificateId, RevokeCertificateRequest request);
+    CrlResponse getCrl(String issuerSerialNumber);
+    OcspStatusResponse getOcspStatus(String serialNumber);
 }

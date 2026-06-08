@@ -15,6 +15,7 @@ import { UserCertificatesPage } from './features/certificates/pages/user-certifi
 import { RegisterUserPage } from './features/auth/pages/register-user-page/register-user-page';
 import { ActivateUserAccountPage } from './features/auth/pages/activate-user-account-page/activate-user-account-page';
 import { ForgotPasswordPage } from './features/auth/pages/forgot-password-page/forgot-password-page';
+import { RevocationToolsPage } from './features/certificates/pages/revocation-tools-page/revocation-tools-page';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -40,6 +41,7 @@ export const routes: Routes = [
       { path: 'ca-users', component: CaUsersPage },
       { path: 'certificates', component: AdminCertificatesPage },
       { path: 'certificates/issue', component: IssueCertificatePage },
+      { path: 'revocation-tools', component: RevocationToolsPage }
     ]
   },
 
@@ -50,15 +52,18 @@ export const routes: Routes = [
     children: [
       { path: '', component: CaDashboardPage },
       { path: 'certificates', component: AdminCertificatesPage },
-      { path: 'certificates/issue', component: IssueCertificatePage }
+      { path: 'certificates/issue', component: IssueCertificatePage },
+      { path: 'revocation-tools', component: RevocationToolsPage }
     ]
   },
   { 
     path: 'user', 
     canActivate: [authGuard, roleGuard], 
     data: { roles: ['USER'] },
-    children: [ { path: '', component: UserDashboardPage},
-    { path: 'certificates', component: UserCertificatesPage }
+    children: [
+      { path: '', component: UserDashboardPage},
+      { path: 'certificates', component: UserCertificatesPage },
+      { path: 'revocation-tools', component: RevocationToolsPage }
     ]
   },
 

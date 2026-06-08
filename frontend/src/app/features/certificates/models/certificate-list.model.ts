@@ -12,4 +12,6 @@ export interface CertificateListItem {
   validTo: string;
   signatureAlgorithm: string | null;
   certificateData: string | null;
+  revocationReason: string | null;
+  revokedAt: string | null;
 }

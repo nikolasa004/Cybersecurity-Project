@@ -1,0 +1,132 @@
+<app-shell
+  [sidebarTitle]="sidebarTitle"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="revocation-page">
+    <div class="revocation-page__header">
+      <h1>Revocation tools</h1>
+      <p>
+        Check certificate revocation status using OCSP and inspect issuer CRL lists.
+      </p>
+    </div>
+
+    <div class="revocation-grid">
+      <div class="revocation-panel">
+        <h2>OCSP checker</h2>
+        <p class="panel-description">
+          Enter a certificate serial number to check whether it is GOOD, REVOKED or UNKNOWN.
+        </p>
+
+        <label for="ocspSerialNumber">Certificate serial number</label>
+        <input
+          id="ocspSerialNumber"
+          type="text"
+          [(ngModel)]="ocspSerialNumber"
+          placeholder="Enter certificate serial number"
+        />
+
+        <div class="panel-actions">
+          <button class="btn-primary" (click)="checkOcsp()" [disabled]="ocspLoading">
+            {{ ocspLoading ? 'Checking...' : 'Check OCSP' }}
+          </button>
+          <button class="btn-secondary" (click)="clearOcsp()">Clear</button>
+        </div>
+
+        @if (ocspError) {
+          <div class="panel-alert panel-alert--error">
+            {{ ocspError }}
+          </div>
+        }
+
+        @if (ocspResult) {
+          <div class="result-card">
+            <div class="result-grid">
+              <div>
+                <span class="result-label">Serial number</span>
+                <span class="result-value">{{ ocspResult.serialNumber }}</span>
+              </div>
+
+              <div>
+                <span class="result-label">Status</span>
+                <span class="result-value">{{ ocspResult.status }}</span>
+              </div>
+
+              <div>
+                <span class="result-label">Revoked at</span>
+                <span class="result-value">
+                  {{ ocspResult.revokedAt ? (ocspResult.revokedAt | date:'medium') : 'Not revoked' }}
+                </span>
+              </div>
+
+              <div>
+                <span class="result-label">Revocation reason</span>
+                <span class="result-value">
+                  {{ getRevocationReasonLabel(ocspResult.revocationReason) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="revocation-panel">
+        <h2>CRL viewer</h2>
+        <p class="panel-description">
+          Enter an issuer serial number to load the certificate revocation list for that issuer.
+        </p>
+
+        <label for="crlIssuerSerialNumber">Issuer serial number</label>
+        <input
+          id="crlIssuerSerialNumber"
+          type="text"
+          [(ngModel)]="crlIssuerSerialNumber"
+          placeholder="Enter issuer serial number"
+        />
+
+        <div class="panel-actions">
+          <button class="btn-primary" (click)="loadCrl()" [disabled]="crlLoading">
+            {{ crlLoading ? 'Loading...' : 'Load CRL' }}
+          </button>
+          <button class="btn-secondary" (click)="clearCrl()">Clear</button>
+        </div>
+
+        @if (crlError) {
+          <div class="panel-alert panel-alert--error">
+            {{ crlError }}
+          </div>
+        }
+
+        @if (crlResult) {
+          <div class="result-card">
+            <div class="result-grid result-grid--single">
+              <div>
+                <span class="result-label">Issuer serial number</span>
+                <span class="result-value">{{ crlResult.issuerSerialNumber }}</span>
+              </div>
+            </div>
+
+            @if (crlResult.revokedCertificates.length === 0) {
+              <p class="empty-state">No revoked certificates found for this issuer.</p>
+            } @else {
+              <div class="crl-list">
+                @for (entry of crlResult.revokedCertificates; track entry.serialNumber) {
+                  <div class="crl-item">
+                    <div><strong>Serial:</strong> {{ entry.serialNumber }}</div>
+                    <div><strong>Reason:</strong> {{ getRevocationReasonLabel(entry.revocationReason) }}</div>
+                    <div>
+                      <strong>Revoked at:</strong>
+                      {{ entry.revokedAt ? (entry.revokedAt | date:'medium') : 'Not available' }}
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+</app-shell>
