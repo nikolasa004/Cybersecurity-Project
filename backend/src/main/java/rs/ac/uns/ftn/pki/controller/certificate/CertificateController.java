@@ -1,6 +1,7 @@
 package rs.ac.uns.ftn.pki.controller.certificate;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,6 +38,13 @@ public class CertificateController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/revoke/{certificateId}")
+    public ResponseEntity<Map<String, String>> revoke(@PathVariable Long certificateId, @Valid @RequestBody RevokeCertificateRequest request) {
+        certificateService.revokeCertificateAsAdmin(certificateId, request);
+        return ResponseEntity.ok(Map.of("message", "Certificate revoked successfully."));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/download-with-key/{certificateId}")
     public ResponseEntity<byte[]> downloadWithKey(@PathVariable Long certificateId, @RequestBody DownloadCertificateRequest request) {
         byte[] pkcs12 = certificateService.downloadPkcs12WithKey(certificateId, request);
@@ -52,12 +60,8 @@ public class CertificateController {
     }
 
     @GetMapping("/download-pem/{id}")
-    public ResponseEntity<java.util.Map<String, String>> downloadPem(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> downloadPem(@PathVariable Long id) {
         String pemContent = certificateService.getCertificateAsPem(id);
-        java.util.Map<String, String> response = new java.util.HashMap<>();
-        response.put("pemContent", pemContent);
-        response.put("fileName", "certificate_" + id + ".pem");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of("pemContent", pemContent, "fileName", "certificate_" + id + ".pem"));
     }
-
 }
