@@ -16,6 +16,9 @@ import { RegisterUserPage } from './features/auth/pages/register-user-page/regis
 import { ActivateUserAccountPage } from './features/auth/pages/activate-user-account-page/activate-user-account-page';
 import { ForgotPasswordPage } from './features/auth/pages/forgot-password-page/forgot-password-page';
 import { RevocationToolsPage } from './features/certificates/pages/revocation-tools-page/revocation-tools-page';
+import { UploadCsrPage } from './features/certificate-requests/pages/upload-csr-page/upload-csr-page';
+import { CaCertificateRequestsPage } from './features/certificate-requests/pages/ca-certificate-requests-page/ca-certificate-requests-page';
+import { AutogenerateCertificatePage } from './features/certificate-requests/pages/autogenerate-certificate/autogenerate-certificate';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
@@ -53,6 +56,7 @@ export const routes: Routes = [
       { path: '', component: CaDashboardPage },
       { path: 'certificates', component: AdminCertificatesPage },
       { path: 'certificates/issue', component: IssueCertificatePage },
+      {path: 'certificate-requests',component: CaCertificateRequestsPage},
       { path: 'revocation-tools', component: RevocationToolsPage }
     ]
   },
@@ -62,7 +66,9 @@ export const routes: Routes = [
     data: { roles: ['USER'] },
     children: [
       { path: '', component: UserDashboardPage},
+      { path: 'upload-csr', component: UploadCsrPage },
       { path: 'certificates', component: UserCertificatesPage },
+      { path: 'request-certificate', component: AutogenerateCertificatePage},
       { path: 'revocation-tools', component: RevocationToolsPage }
     ]
   },

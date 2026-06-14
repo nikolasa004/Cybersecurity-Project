@@ -1,0 +1,10 @@
+@import '../../../certificates/pages/admin-certificates-page/admin-certificates-page.css';
+
+textarea {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+  resize: vertical;
+}

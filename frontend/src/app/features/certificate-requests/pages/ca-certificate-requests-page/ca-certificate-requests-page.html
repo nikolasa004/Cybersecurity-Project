@@ -1,0 +1,177 @@
+<app-shell
+  sidebarTitle="CA panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="requests-page">
+
+    <div class="requests-page__header">
+      <div>
+        <h1>Certificate Requests</h1>
+        <p>
+          Review pending CSR requests submitted by users from your organization.
+        </p>
+      </div>
+
+      <button
+        class="btn-primary"
+        type="button"
+        (click)="loadRequests()"
+      >
+        Refresh
+      </button>
+    </div>
+
+    @if (errorMessage) {
+      <div class="certificates-alert certificates-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="certificates-alert certificates-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    <div class="certificates-panel">
+
+      @if (loading) {
+        <p>Loading requests...</p>
+      }
+      @else if (requests.length === 0) {
+        <p>No pending certificate requests.</p>
+      }
+      @else {
+
+        <div class="certificates-list">
+
+          @for (request of requests; track request.id) {
+
+            <div class="certificate-card">
+
+              <div class="certificate-card__top">
+
+                <div>
+                  <h2>{{ request.requesterEmail }}</h2>
+                  <p>{{ request.issuerCommonName }}</p>
+                </div>
+
+                <div class="certificate-card__badges">
+                  <span class="badge badge--type">
+                    Pending
+                  </span>
+                </div>
+
+              </div>
+
+              <div class="certificate-card__grid">
+
+                <div>
+                  <span class="certificate-card__label">
+                    Valid from
+                  </span>
+
+                  <span class="certificate-card__value">
+                    {{ request.validFrom | date:'medium' }}
+                  </span>
+                </div>
+
+                <div>
+                  <span class="certificate-card__label">
+                    Valid to
+                  </span>
+
+                  <span class="certificate-card__value">
+                    {{ request.validTo | date:'medium' }}
+                  </span>
+                </div>
+
+                <div class="certificate-card__wide">
+                  <span class="certificate-card__label">
+                    Submitted
+                  </span>
+
+                  <span class="certificate-card__value">
+                    {{ request.createdAt | date:'medium' }}
+                  </span>
+                </div>
+
+              </div>
+
+              <div class="certificate-card__actions">
+
+                <button
+                  class="btn-primary"
+                  (click)="approveRequest(request.id)"
+                  [disabled]="processing"
+                >
+                  Approve
+                </button>
+
+                <button
+                  class="btn-danger"
+                  (click)="openRejectModal(request.id)"
+                  [disabled]="processing"
+                >
+                  Reject
+                </button>
+
+              </div>
+
+            </div>
+
+          }
+
+        </div>
+
+      }
+
+    </div>
+
+  </section>
+
+  @if (showRejectModal) {
+
+    <div class="modal-backdrop">
+
+      <div class="password-modal">
+
+        <h3>Reject certificate request</h3>
+
+        <textarea
+          rows="4"
+          [(ngModel)]="rejectionReason"
+          placeholder="Reason for rejection"
+        ></textarea>
+
+        <div class="password-modal__actions">
+
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="closeRejectModal()"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="btn-danger"
+            (click)="confirmReject()"
+            [disabled]="!rejectionReason.trim()"
+          >
+            Reject
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+</app-shell>

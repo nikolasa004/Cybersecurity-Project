@@ -1,0 +1,242 @@
+<app-shell
+  sidebarTitle="User panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="csr-page">
+    <div class="csr-page__hero">
+      <div class="csr-page__hero-content">
+        <span class="csr-page__eyebrow">Certificate Signing Request</span>
+        <h1>Upload CSR</h1>
+        <p>
+          Upload a Certificate Signing Request generated on your machine.
+          Your private key stays with you, while the CA reviews and approves
+          the certificate request.
+        </p>
+      </div>
+    </div>
+
+    @if (errorMessage) {
+      <div class="csr-alert csr-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="csr-alert csr-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    <div class="csr-layout">
+      <div class="csr-panel">
+        <form [formGroup]="uploadForm" (ngSubmit)="submit()">
+          <div class="csr-section">
+            <h2>CSR file and issuer</h2>
+
+            <div class="form-grid">
+              <div class="form-group form-group--full">
+                <label for="csrFile">CSR file</label>
+
+                <input
+                  id="csrFile"
+                  type="file"
+                  accept=".csr,.pem"
+                  (change)="onFileSelected($event)"
+                />
+
+                <div class="form-hint">
+                  Accepted formats: .csr or .pem containing a Certificate Signing Request.
+                </div>
+
+                @if (selectedFile) {
+                  <div class="selected-file">
+                    Selected file: {{ selectedFile.name }}
+                  </div>
+                }
+              </div>
+
+              <div class="form-group form-group--full">
+                <label for="issuerCertificateId">Issuer certificate</label>
+
+                <select
+                  id="issuerCertificateId"
+                  formControlName="issuerCertificateId"
+                  [disabled]="loadingIssuers"
+                >
+                  @if (loadingIssuers) {
+                    <option [ngValue]="null">
+                      Loading issuer certificates...
+                    </option>
+                  } @else {
+                   <option [ngValue]="null">
+  Select issuer
+</option>
+
+@for (issuer of issuers; track issuer.id) {
+  <option [ngValue]="issuer.id">
+    {{ issuer.label }}
+  </option>
+}
+                  }
+                </select>
+
+                @if (hasError('issuerCertificateId', 'required')) {
+                  <div class="form-error">
+                    Issuer certificate is required.
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="csr-section">
+            <h2>Validity period</h2>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="validFrom">Valid from</label>
+
+                <input
+                  id="validFrom"
+                  type="datetime-local"
+                  formControlName="validFrom"
+                  [min]="minDate"
+                />
+
+                @if (hasError('validFrom', 'required')) {
+                  <div class="form-error">
+                    Valid from is required.
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="validTo">Valid to</label>
+
+                <input
+                  id="validTo"
+                  type="datetime-local"
+                  formControlName="validTo"
+                  [min]="minDate"
+                  [max]="issuerMaxDate"
+                />
+
+                @if (hasError('validTo', 'required')) {
+                  <div class="form-error">
+                    Valid to is required.
+                  </div>
+                }
+
+                @if (issuerMaxDate) {
+                  <div class="form-hint">
+                    Must be before: {{ issuerMaxDate | date:'medium' }}
+                  </div>
+                }
+              </div>
+
+              @if (uploadForm.hasError('datesInvalid') && submitted) {
+                <div class="form-error form-group--full">
+                  "Valid to" date must be after "Valid from" date.
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="csr-panel__footer">
+            <p>
+              The backend will validate the CSR and store it as a pending
+              certificate request. A CA user from your organization must approve
+              it before a certificate is issued.
+            </p>
+
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="submitting"
+            >
+              {{ submitting ? 'Submitting...' : 'Submit CSR request' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="csr-panel">
+        <div class="csr-table-header">
+          <div>
+            <h2>My CSR requests</h2>
+            <p>
+              Track requests submitted from uploaded CSR files.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="loadMyRequests()"
+          >
+            Refresh
+          </button>
+        </div>
+
+        @if (loadingRequests) {
+          <div class="empty-state">
+            Loading requests...
+          </div>
+        } @else if (requests.length === 0) {
+          <div class="empty-state">
+            You have not submitted any CSR requests yet.
+          </div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Issuer</th>
+                  <th>Status</th>
+                  <th>Valid from</th>
+                  <th>Valid to</th>
+                  <th>Created</th>
+                  <th>Processed</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for (request of requests; track request.id) {
+                  <tr>
+                    <td>{{ request.issuerCommonName }}</td>
+
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-badge--pending]="request.status === 'PENDING'"
+                        [class.status-badge--approved]="request.status === 'APPROVED'"
+                        [class.status-badge--rejected]="request.status === 'REJECTED'"
+                      >
+                        {{ getStatusLabel(request.status) }}
+                      </span>
+                    </td>
+
+                    <td>{{ request.validFrom | date:'medium' }}</td>
+                    <td>{{ request.validTo | date:'medium' }}</td>
+                    <td>{{ request.createdAt | date:'medium' }}</td>
+
+                    <td>
+                      @if (request.processedAt) {
+                        {{ request.processedAt | date:'medium' }}
+                      } @else {
+                        —
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+</app-shell>

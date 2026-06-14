@@ -32,6 +32,9 @@ import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Date;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Component
 @RequiredArgsConstructor
@@ -149,7 +152,7 @@ public class DataInitializer implements CommandLineRunner {
         caNextesy.setPasswordHash(passwordEncoder.encode("causer123"));
         caNextesy.setRole(UserRole.CA_USER);
         caNextesy.setActive(true);
-        caNextesy.setOrganization(nextesy);
+        caNextesy.setOrganization(systemOrganization);
         caNextesy.setTwoFactorEnabled(false);
         userRepository.save(caNextesy);
 
@@ -231,6 +234,7 @@ public class DataInitializer implements CommandLineRunner {
         rootCertificate.setSubjectAlternativeName("Alternative Names");
 
         Certificate savedRoot = certificateRepository.save(rootCertificate);
+        saveCertificateToFile(savedRoot);
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 systemOrganization.getEncryptedOrgKey(),
@@ -322,6 +326,7 @@ public class DataInitializer implements CommandLineRunner {
         cert.setIssuerCommonNameSnapshot(issuerCert.getSubjectData().getCommonName());
 
         Certificate saved = certificateRepository.save(cert);
+        saveCertificateToFile(saved);
 
         byte[] orgKeyBytes = keyEncryptionService.decrypt(
                 user.getOrganization().getEncryptedOrgKey(),
@@ -362,6 +367,37 @@ public class DataInitializer implements CommandLineRunner {
                     + "\n-----END CERTIFICATE-----";
         } catch (Exception e) {
             throw new RuntimeException("Failed to encode certificate to PEM.", e);
+        }
+    }
+
+    private void saveCertificateToFile(Certificate certificate) {
+
+        try {
+
+            Path dir = Paths.get("certs");
+
+            Files.createDirectories(dir);
+
+            String fileName =
+                    certificate.getSubjectData().getCommonName()
+                            + "_"
+                            + certificate.getSerialNumber()
+                            + ".pem";
+
+            Path filePath =
+                    dir.resolve(fileName);
+
+            Files.writeString(
+                    filePath,
+                    certificate.getEncodedCertificate()
+            );
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to save certificate file.",
+                    e
+            );
         }
     }
 }
