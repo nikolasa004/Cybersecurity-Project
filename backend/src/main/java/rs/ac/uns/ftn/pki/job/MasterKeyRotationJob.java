@@ -24,7 +24,7 @@ public class MasterKeyRotationJob {
      * "0 0 2 1 1,7 *" -> January 1st and July 1st at 02:00 AM
      * For testing (every minute): "0 * * * * *"
      */
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 2 1 1,7 *")
     public void performMasterKeyRotation() {
         log.info("Starting master key rotation process...");
 
