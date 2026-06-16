@@ -20,21 +20,21 @@ public class MasterKeyRotationJob {
     private final OrganizationRepository organizationRepository;
 
     /**
-     * Cron izraz format: sekunda minut sat dan_u_mesecu mesec dan_u_nedelji
-     * "0 0 2 1 1,7 *" -> 1. Januara i 1. Jula u 02:00 noću
-     * Za testiranje ( svaki minut ): "0 * * * * *"
+     * Cron expression format: second minute hour day_of_month month day_of_week
+     * "0 0 2 1 1,7 *" -> January 1st and July 1st at 02:00 AM
+     * For testing (every minute): "0 * * * * *"
      */
     @Scheduled(cron = "0 0 2 1 1,7 *")
     public void performMasterKeyRotation() {
-        log.info("Započinjem proces rotacije master ključa...");
+        log.info("Starting master key rotation process...");
 
         String oldVersion = keyEncryptionService.getCurrentActiveVersion();
 
         String newVersion = keyEncryptionService.rotateToNewMasterKey();
-        log.info("Generisana nova verzija ključa: {}. Stara verzija je: {}", newVersion, oldVersion);
+        log.info("New key version generated: {}. Old version is: {}", newVersion, oldVersion);
 
         List<Organization> organizationsToMigrate = organizationRepository.findByMasterKeyVersion(oldVersion);
-        log.info("Pronađeno {} organizacija za migraciju.", organizationsToMigrate.size());
+        log.info("Found {} organizations for migration.", organizationsToMigrate.size());
 
         SecretKey oldSecretKey = keyEncryptionService.getMasterKeyByVersion(oldVersion);
         SecretKey newSecretKey = keyEncryptionService.getMasterKeyByVersion(newVersion);
@@ -53,15 +53,15 @@ public class MasterKeyRotationJob {
 
                 successCount++;
             } catch (Exception e) {
-                log.error("Greška pri migraciji ključa za organizaciju ID: {}", org.getId(), e);
+                log.error("Error migrating key for organization ID: {}", org.getId(), e);
             }
         }
 
         if (successCount == organizationsToMigrate.size()) {
             keyEncryptionService.archiveOldMasterKey(oldVersion);
-            log.info("Rotacija uspešno završena. Stari ključ {} je arhiviran.", oldVersion);
+            log.info("Rotation successfully completed. Old key {} has been archived.", oldVersion);
         } else {
-            log.warn("Nisu sve organizacije uspešno migrirane. Stari ključ ostaje u READ_ONLY statusu.");
+            log.warn("Not all organizations were successfully migrated. Old key remains in READ_ONLY status.");
         }
     }
 }
