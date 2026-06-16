@@ -14,6 +14,7 @@ export const NAVIGATION_BY_ROLE: Record<UserRole, NavigationItem[]> = {
     { label: 'Dashboard', route: '/ca' },
     { label: 'Certificates', route: '/ca/certificates' },
     { label: 'Issue Certificate', route: '/ca/certificates/issue' },
+    { label: 'Certificate Requests', route: '/ca/certificate-requests' },
     { label: 'Downloads', route: '/ca/downloads' },
     { label: 'Revocation', route: '/ca/revocation-tools' }
   ],

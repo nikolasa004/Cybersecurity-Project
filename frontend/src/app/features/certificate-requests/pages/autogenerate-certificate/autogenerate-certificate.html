@@ -1,0 +1,229 @@
+<app-shell
+  sidebarTitle="User panel"
+  [navItems]="navItems"
+  [fullName]="profile.fullName"
+  [roleLabel]="profile.roleLabel"
+  [organization]="profile.organization"
+>
+  <section class="issue-page">
+    <div class="issue-page__header">
+      <h1>Auto-generate certificate</h1>
+
+      <p>
+        Generate an end-entity certificate. The system will generate a key pair
+        and automatically download a PKCS12 file containing the certificate and
+        private key.
+      </p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="issue-alert issue-alert--error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="issue-alert issue-alert--success">
+        {{ successMessage }}
+      </div>
+    }
+
+    <div class="issue-panel">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <div class="issue-section">
+          <h2>Issuer and validity</h2>
+
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label for="issuerCertificateId">
+                Issuer certificate
+              </label>
+
+              <select
+                id="issuerCertificateId"
+                formControlName="issuerCertificateId"
+                [disabled]="loadingIssuers"
+              >
+                @if (loadingIssuers) {
+                  <option>Loading issuer certificates...</option>
+                } @else {
+                  <option [ngValue]="null">
+  Select issuer
+</option>
+
+@for (issuer of issuers; track issuer.id) {
+  <option [ngValue]="issuer.id">
+    {{ issuer.label }}
+  </option>
+}
+                }
+              </select>
+
+              @if (hasError('issuerCertificateId', 'required')) {
+                <div class="form-error">
+                  Issuer certificate is required.
+                </div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="subjectAlternativeName">
+                Subject Alternative Name
+              </label>
+
+              <input
+                id="subjectAlternativeName"
+                type="text"
+                formControlName="subjectAlternativeName"
+                placeholder="example.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="validFrom">Valid from</label>
+
+              <input
+                id="validFrom"
+                type="datetime-local"
+                formControlName="validFrom"
+                [min]="minDate"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="validTo">Valid to</label>
+
+              <input
+                id="validTo"
+                type="datetime-local"
+                formControlName="validTo"
+                [min]="minDate"
+                [max]="issuerMaxDate"
+              />
+
+              @if (issuerMaxDate) {
+                <div class="form-hint">
+                  Must be before:
+                  {{ issuerMaxDate | date:'medium' }}
+                </div>
+              }
+            </div>
+
+          </div>
+        </div>
+
+        <div class="issue-section">
+          <h2>Subject data</h2>
+
+          <div class="form-grid">
+
+            <div class="form-group form-group--full">
+              <label for="commonName">
+                Common Name (CN)
+              </label>
+
+              <input
+                id="commonName"
+                type="text"
+                formControlName="commonName"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="country">Country (C)</label>
+
+              <input
+                id="country"
+                type="text"
+                formControlName="country"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="state">State (ST)</label>
+
+              <input
+                id="state"
+                type="text"
+                formControlName="state"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="locality">Locality (L)</label>
+
+              <input
+                id="locality"
+                type="text"
+                formControlName="locality"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="organization">
+                Organization (O)
+              </label>
+
+              <input
+                id="organization"
+                type="text"
+                formControlName="organization"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="organizationalUnit">
+                Organizational Unit (OU)
+              </label>
+
+              <input
+                id="organizationalUnit"
+                type="text"
+                formControlName="organizationalUnit"
+              />
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="email">Email</label>
+
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+              />
+            </div>
+
+          </div>
+        </div>
+
+        <div class="issue-panel__footer">
+
+          <p>
+            A PKCS12 file containing the generated certificate and
+            private key will be downloaded automatically.
+          </p>
+
+          <div class="actions">
+
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="submitting"
+            >
+              {{
+                submitting
+                  ? 'Generating...'
+                  : 'Generate certificate'
+              }}
+            </button>
+
+          </div>
+
+        </div>
+
+      </form>
+    </div>
+  </section>
+</app-shell>

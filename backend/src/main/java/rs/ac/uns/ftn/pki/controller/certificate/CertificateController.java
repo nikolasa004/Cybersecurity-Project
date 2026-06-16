@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import rs.ac.uns.ftn.pki.dto.certificate.*;
+import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateAutoCertificateRequest;
 import rs.ac.uns.ftn.pki.model.enums.CertificateType;
 import rs.ac.uns.ftn.pki.service.CertificateService;
 
@@ -63,5 +64,17 @@ public class CertificateController {
     public ResponseEntity<Map<String, String>> downloadPem(@PathVariable Long id) {
         String pemContent = certificateService.getCertificateAsPem(id);
         return ResponseEntity.ok(Map.of("pemContent", pemContent, "fileName", "certificate_" + id + ".pem"));
+    }
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/autogenerate")
+    public ResponseEntity<CertificateResponse> autoGenerateCertificate(
+            @Valid @RequestBody CreateAutoCertificateRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                certificateService.autoGenerateCertificate(
+                        request
+                )
+        );
     }
 }

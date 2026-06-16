@@ -26,6 +26,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 import lombok.RequiredArgsConstructor;
 import rs.ac.uns.ftn.pki.dto.certificate.*;
+import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateAutoCertificateRequest;
+import rs.ac.uns.ftn.pki.dto.certificateRequest.ParsedCsrData;
 import rs.ac.uns.ftn.pki.exception.BadRequestException;
 import rs.ac.uns.ftn.pki.exception.CertificateFileReadException;
 import rs.ac.uns.ftn.pki.exception.NotFoundException;
@@ -634,12 +636,20 @@ public class CertificateServiceImpl implements CertificateService {
         Certificate current = certificate;
 
         while (current != null) {
-
+            System.out.println(
+                    "CHAIN CERT: "
+                            + current.getSerialNumber()
+            );
             String pem = readCertificateFromFile(current);
 
+            System.out.println(
+                    "PEM LOADED"
+            );
             X509Certificate x509 =
                     convertToX509(pem);
-
+            System.out.println(
+                    "X509 CREATED"
+            );
             chain.add(x509);
 
             if (current.getType() == CertificateType.ROOT) {
@@ -661,15 +671,18 @@ public class CertificateServiceImpl implements CertificateService {
 
         try (ByteArrayOutputStream baos =
                      new ByteArrayOutputStream()) {
-
+            System.out.println("PKCS12 STEP 1");
             KeyStore pkcs12 =
                     KeyStore.getInstance("PKCS12");
 
             pkcs12.load(null, null);
-
+            System.out.println("PKCS12 STEP 2");
             java.security.cert.Certificate[] chain =
                     buildCertificateChain(certificate);
-
+            System.out.println(
+                    "PKCS12 STEP 3 chain size = "
+                            + chain.length
+            );
             String alias =
                     certificate.getSubjectData()
                             .getCommonName()
@@ -685,9 +698,9 @@ public class CertificateServiceImpl implements CertificateService {
                     passwordChars,
                     chain
             );
-
+            System.out.println("PKCS12 STEP 4");
             pkcs12.store(baos, passwordChars);
-
+            System.out.println("PKCS12 STEP 5");
             return baos.toByteArray();
 
         } catch (Exception e) {
@@ -871,4 +884,369 @@ public class CertificateServiceImpl implements CertificateService {
 
         applyRevocation(certificate, request);
     }
+    @Override
+    @Transactional
+    public CertificateResponse issueCertificateFromCsr(
+            ParsedCsrData csrData,
+            Certificate issuer,
+            LocalDateTime validFrom,
+            LocalDateTime validTo
+    ) {
+
+        User currentUser = authService.getLoggedInUser();
+
+        X500SubjectData subjectData = new X500SubjectData();
+        subjectData.setCommonName(csrData.getCommonName());
+        subjectData.setCountry(csrData.getCountry());
+        subjectData.setState(csrData.getState());
+        subjectData.setLocality(csrData.getLocality());
+        subjectData.setOrganization(csrData.getOrganization());
+        subjectData.setOrganizationalUnit(csrData.getOrganizationalUnit());
+        subjectData.setEmail(csrData.getEmail());
+
+        X500Name subjectX500Name =
+                x500NameBuilderService.build(subjectData);
+
+        X500Name issuerX500Name =
+                x500NameBuilderService.build(
+                        issuer.getSubjectData()
+                );
+
+        PrivateKey issuerPrivateKey;
+
+        try {
+
+            PrivateKeyEntity keyEntity =
+                    privateKeyRepository
+                            .findByCertificate(issuer)
+                            .orElseThrow(() ->
+                                    new NotFoundException(
+                                            "Private key not found"
+                                    ));
+
+            byte[] orgKeyBytes =
+                    keyEncryptionService.decrypt(
+                            issuer.getOrganization()
+                                    .getEncryptedOrgKey(),
+                            keyEncryptionService
+                                    .getMasterKeyByVersion(
+                                            issuer.getOrganization()
+                                                    .getMasterKeyVersion()
+                                    )
+                    );
+
+            SecretKey orgKey =
+                    new SecretKeySpec(
+                            orgKeyBytes,
+                            "AES"
+                    );
+
+            byte[] decryptedKey =
+                    keyEncryptionService.decrypt(
+                            keyEntity.getEncryptedPrivateKey(),
+                            orgKey
+                    );
+
+            KeyFactory keyFactory =
+                    KeyFactory.getInstance("RSA");
+
+            issuerPrivateKey =
+                    keyFactory.generatePrivate(
+                            new PKCS8EncodedKeySpec(
+                                    decryptedKey
+                            )
+                    );
+
+        } catch (Exception e) {
+            throw new NotFoundException(
+                    "Failed to load issuer private key"
+            );
+        }
+
+        BigInteger serialNumber =
+                generateSerialNumber();
+
+        String crlUrl =
+                buildCrlUrl(
+                        issuer.getSerialNumber()
+                );
+
+        String ocspUrl =
+                buildOcspUrl(
+                        serialNumber.toString()
+                );
+
+        X509Certificate x509Certificate =
+                certificateGeneratorService
+                        .generateCertificate(
+                                issuerX500Name,
+                                issuerPrivateKey,
+                                subjectX500Name,
+                                csrData.getPublicKey(),
+                                serialNumber,
+                                toDate(validFrom),
+                                toDate(validTo),
+                                false,          // EE cert
+                                false,
+                                true,
+                                true,
+                                null,
+                                "SHA256withRSA",
+                                crlUrl,
+                                ocspUrl
+                        );
+
+        IssueCertificateRequest fakeRequest =
+                new IssueCertificateRequest();
+
+        fakeRequest.setType(
+                CertificateType.END_ENTITY
+        );
+
+        fakeRequest.setValidFrom(validFrom);
+        fakeRequest.setValidTo(validTo);
+
+        fakeRequest.setCa(false);
+        fakeRequest.setKeyCertSign(false);
+        fakeRequest.setDigitalSignature(true);
+        fakeRequest.setKeyEncipherment(true);
+
+        Certificate certificate =
+                certificateEntityFactory.create(
+                        fakeRequest,
+                        serialNumber.toString(),
+                        subjectData,
+                        issuer,
+                        currentUser.getOrganization(),
+                        toPem(x509Certificate)
+                );
+
+        Certificate saved =
+                certificateRepository.save(
+                        certificate
+                );
+
+        saveCertificateToFile(saved);
+
+        return certificateMapper.toResponse(
+                saved,
+                null
+        );
+    }
+
+    @Transactional
+    public CertificateResponse autoGenerateCertificate(
+            CreateAutoCertificateRequest request
+    ) {
+
+        User currentUser = authService.getLoggedInUser();
+
+        Certificate issuer =
+                certificateRepository.findById(
+                                request.getIssuerCertificateId()
+                        )
+                        .orElseThrow(() ->
+                                new NotFoundException(
+                                        "Issuer not found"
+                                ));
+
+        if (!issuer.isCa()) {
+            throw new BadRequestException(
+                    "Selected issuer is not a CA certificate."
+            );
+        }
+
+        if (request.getValidTo().isAfter(
+                issuer.getValidTo()
+        )) {
+            throw new BadRequestException(
+                    "Certificate validity cannot exceed issuer validity."
+            );
+        }
+
+        X500SubjectData subjectData =
+                new X500SubjectData();
+
+        subjectData.setCommonName(
+                request.getCommonName()
+        );
+
+        subjectData.setCountry(
+                request.getCountry()
+        );
+
+        subjectData.setState(
+                request.getState()
+        );
+
+        subjectData.setLocality(
+                request.getLocality()
+        );
+
+        subjectData.setOrganization(
+                request.getOrganization()
+        );
+
+        subjectData.setOrganizationalUnit(
+                request.getOrganizationalUnit()
+        );
+
+        subjectData.setEmail(
+                request.getEmail()
+        );
+
+        X500Name subjectX500Name =
+                x500NameBuilderService.build(
+                        subjectData
+                );
+
+        X500Name issuerX500Name =
+                x500NameBuilderService.build(
+                        issuer.getSubjectData()
+                );
+
+        KeyPair subjectKeyPair =
+                keyPairGeneratorService
+                        .generateRsaKeyPair();
+
+        PrivateKey issuerPrivateKey;
+
+        try {
+
+            PrivateKeyEntity keyEntity =
+                    privateKeyRepository
+                            .findByCertificate(issuer)
+                            .orElseThrow(() ->
+                                    new NotFoundException(
+                                            "Private key not found"
+                                    ));
+
+            byte[] orgKeyBytes =
+                    keyEncryptionService.decrypt(
+                            issuer.getOrganization()
+                                    .getEncryptedOrgKey(),
+                            keyEncryptionService
+                                    .getMasterKeyByVersion(
+                                            issuer.getOrganization()
+                                                    .getMasterKeyVersion()
+                                    )
+                    );
+
+            SecretKey orgKey =
+                    new SecretKeySpec(
+                            orgKeyBytes,
+                            "AES"
+                    );
+
+            byte[] decryptedKey =
+                    keyEncryptionService.decrypt(
+                            keyEntity.getEncryptedPrivateKey(),
+                            orgKey
+                    );
+
+            KeyFactory keyFactory =
+                    KeyFactory.getInstance("RSA");
+
+            issuerPrivateKey =
+                    keyFactory.generatePrivate(
+                            new PKCS8EncodedKeySpec(
+                                    decryptedKey
+                            )
+                    );
+
+        } catch (Exception e) {
+
+            throw new NotFoundException(
+                    "Failed to load issuer private key"
+            );
+        }
+
+        BigInteger serialNumber =
+                generateSerialNumber();
+
+        String crlUrl =
+                buildCrlUrl(
+                        issuer.getSerialNumber()
+                );
+
+        String ocspUrl =
+                buildOcspUrl(
+                        serialNumber.toString()
+                );
+
+        X509Certificate x509Certificate =
+                certificateGeneratorService
+                        .generateCertificate(
+                                issuerX500Name,
+                                issuerPrivateKey,
+                                subjectX500Name,
+                                subjectKeyPair.getPublic(),
+                                serialNumber,
+                                toDate(request.getValidFrom()),
+                                toDate(request.getValidTo()),
+                                false,
+                                false,
+                                true,
+                                true,
+                                request.getSubjectAlternativeName(),
+                                "SHA256withRSA",
+                                crlUrl,
+                                ocspUrl
+                        );
+
+        IssueCertificateRequest fakeRequest =
+                new IssueCertificateRequest();
+
+        fakeRequest.setType(
+                CertificateType.END_ENTITY
+        );
+
+        fakeRequest.setValidFrom(
+                request.getValidFrom()
+        );
+
+        fakeRequest.setValidTo(
+                request.getValidTo()
+        );
+
+        fakeRequest.setCa(false);
+        fakeRequest.setKeyCertSign(false);
+        fakeRequest.setDigitalSignature(true);
+        fakeRequest.setKeyEncipherment(true);
+
+        Certificate certificate =
+                certificateEntityFactory.create(
+                        fakeRequest,
+                        serialNumber.toString(),
+                        subjectData,
+                        issuer,
+                        currentUser.getOrganization(),
+                        toPem(x509Certificate)
+                );
+
+        certificate.setSubjectAlternativeName(
+                request.getSubjectAlternativeName()
+        );
+        System.out.println("1 - before save");
+        Certificate saved =
+                certificateRepository.save(
+                        certificate
+                );
+        System.out.println("2 - After save");
+        saveCertificateToFile(saved);
+        System.out.println("3 - After file save");
+
+        byte[] pkcs12 =
+                createPkcs12(
+                        subjectKeyPair.getPrivate(),
+                        saved,
+                        null
+                );
+        System.out.println("4 - after pkcs12");
+        return certificateMapper.toResponse(
+                saved,
+                pkcs12
+        );
+    }
+
 }

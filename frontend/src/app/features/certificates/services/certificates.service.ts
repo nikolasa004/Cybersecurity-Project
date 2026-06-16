@@ -88,4 +88,11 @@ export class CertificatesService {
 
     return this.http.get<{ pemContent: string; fileName: string }>(url);
   }
+
+  autoGenerate(payload: any): Observable<CertificateListItem> {
+  return this.http.post<CertificateListItem>(
+    `${API_BASE_URL}/admin/certificates/autogenerate`,
+    payload
+  );
+}
 }
