@@ -3,7 +3,6 @@ package rs.ac.uns.ftn.pki.service;
 import org.springframework.web.multipart.MultipartFile;
 import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.CertificateRequestResponse;
-import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateAutoCertificateRequest;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateCertificateRequestRequest;
 
 import java.util.List;

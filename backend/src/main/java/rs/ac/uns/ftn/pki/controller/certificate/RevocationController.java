@@ -24,4 +24,14 @@ public class RevocationController {
     public ResponseEntity<OcspStatusResponse> getOcspStatus(@PathVariable String serialNumber) {
         return ResponseEntity.ok(certificateService.getOcspStatus(serialNumber));
     }
+    
+    @GetMapping(value = "/crl/{issuerSerialNumber}/download", produces = "application/pkix-crl")
+    public ResponseEntity<byte[]> downloadCrl(@PathVariable String issuerSerialNumber) {
+        byte[] crlBytes = certificateService.downloadStandardCrl(issuerSerialNumber);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"crl_" + issuerSerialNumber + ".crl\"")
+                .header("Content-Type", "application/pkix-crl")
+                .body(crlBytes);
+    }
 }

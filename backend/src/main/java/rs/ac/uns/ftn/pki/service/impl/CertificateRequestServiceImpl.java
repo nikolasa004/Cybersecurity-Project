@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import rs.ac.uns.ftn.pki.dto.certificate.CertificateResponse;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.CertificateRequestResponse;
-import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateAutoCertificateRequest;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateCertificateRequestRequest;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.ParsedCsrData;
 import rs.ac.uns.ftn.pki.exception.NotFoundException;
@@ -18,16 +17,9 @@ import rs.ac.uns.ftn.pki.repository.CertificateRepository;
 import rs.ac.uns.ftn.pki.repository.CertificateRequestRepository;
 import rs.ac.uns.ftn.pki.repository.UserRepository;
 import rs.ac.uns.ftn.pki.service.CertificateRequestService;
-import rs.ac.uns.ftn.pki.service.UserService;
-import rs.ac.uns.ftn.pki.service.crypto.CsrGeneratorService;
 import rs.ac.uns.ftn.pki.service.crypto.CsrParserServiceImpl;
-import rs.ac.uns.ftn.pki.service.crypto.KeyEncryptionService;
-import rs.ac.uns.ftn.pki.service.crypto.KeyPairGeneratorService;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.security.KeyPair;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,9 +32,7 @@ public class CertificateRequestServiceImpl implements CertificateRequestService 
     private final UserRepository userRepository;
     private final CsrParserServiceImpl csrParserServiceImpl;
     private final CertificateServiceImpl certificateService;
-    private final KeyPairGeneratorService keyPairGeneratorService;
-    private final CsrGeneratorService csrGeneratorService;
-    private final KeyEncryptionService keyEncryptionService;
+
     @Transactional
     @Override
     public CertificateRequestResponse createRequest(MultipartFile csrFile,CreateCertificateRequestRequest request) {

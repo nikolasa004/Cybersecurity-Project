@@ -19,6 +19,11 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.CRLReason;
+import org.bouncycastle.cert.X509CRLHolder;
+import org.bouncycastle.cert.X509v2CRLBuilder;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -884,6 +889,88 @@ public class CertificateServiceImpl implements CertificateService {
 
         applyRevocation(certificate, request);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadStandardCrl(String issuerSerialNumber) {
+        try {
+            Certificate issuerCertificate = certificateRepository.findBySerialNumber(issuerSerialNumber).orElseThrow(() -> new NotFoundException("Issuer certificate not found."));
+
+            PrivateKey issuerPrivateKey = loadIssuerPrivateKeyForCrl(issuerCertificate);
+            X500Name issuerX500Name = x500NameBuilderService.build(issuerCertificate.getSubjectData());
+
+            Date thisUpdate = new Date();
+            Date nextUpdate = Date.from(
+                    LocalDateTime.now()
+                            .plusDays(7)
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+            );
+
+            X509v2CRLBuilder crlBuilder = new X509v2CRLBuilder(issuerX500Name, thisUpdate);
+            crlBuilder.setNextUpdate(nextUpdate);
+
+            List<Certificate> revokedCertificates = certificateRepository.findRevokedByIssuerSerialNumber(issuerSerialNumber);
+
+            for (Certificate revokedCertificate : revokedCertificates) {
+                crlBuilder.addCRLEntry(
+                        new BigInteger(revokedCertificate.getSerialNumber()),
+                        toDate(revokedCertificate.getRevokedAt()),
+                        mapRevocationReasonToCrlReason(revokedCertificate.getRevocationReason())
+                );
+            }
+
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA")
+                    .setProvider("BC")
+                    .build(issuerPrivateKey);
+
+            X509CRLHolder crlHolder = crlBuilder.build(signer);
+
+            return crlHolder.getEncoded();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate CRL.", e);
+        }
+    }
+    
+    private PrivateKey loadIssuerPrivateKeyForCrl(Certificate issuerCertificate) {
+        try {
+            PrivateKeyEntity keyEntity = privateKeyRepository.findByCertificate(issuerCertificate)
+                    .orElseThrow(() -> new RuntimeException("Issuer private key not found."));
+
+            byte[] orgKeyBytes = keyEncryptionService.decrypt(issuerCertificate.getOrganization().getEncryptedOrgKey(), keyEncryptionService.getMasterKeyByVersion(issuerCertificate.getOrganization().getMasterKeyVersion()));
+
+            SecretKey orgKey = new SecretKeySpec(orgKeyBytes, "AES");
+
+            byte[] decryptedKey = keyEncryptionService.decrypt(
+                    keyEntity.getEncryptedPrivateKey(),
+                    orgKey
+            );
+
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decryptedKey));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load issuer private key for CRL.", e);
+        }
+    }
+    
+    private int mapRevocationReasonToCrlReason(String reason) {
+        if (reason == null) {
+            return CRLReason.unspecified;
+        }
+
+        return switch (reason) {
+            case "KEY_COMPROMISE" -> CRLReason.keyCompromise;
+            case "CA_COMPROMISE" -> CRLReason.cACompromise;
+            case "AFFILIATION_CHANGED" -> CRLReason.affiliationChanged;
+            case "SUPERSEDED" -> CRLReason.superseded;
+            case "CESSATION_OF_OPERATION" -> CRLReason.cessationOfOperation;
+            case "CERTIFICATE_HOLD" -> CRLReason.certificateHold;
+            case "PRIVILEGE_WITHDRAWN" -> CRLReason.privilegeWithdrawn;
+            case "AA_COMPROMISE" -> CRLReason.aACompromise;
+            default -> CRLReason.unspecified;
+        };
+    }
+    
     @Override
     @Transactional
     public CertificateResponse issueCertificateFromCsr(

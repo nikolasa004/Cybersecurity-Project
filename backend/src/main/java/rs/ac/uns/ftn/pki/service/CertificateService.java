@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import rs.ac.uns.ftn.pki.dto.certificate.*;
-import rs.ac.uns.ftn.pki.dto.certificateRequest.CertificateRequestResponse;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.CreateAutoCertificateRequest;
 import rs.ac.uns.ftn.pki.dto.certificateRequest.ParsedCsrData;
 import rs.ac.uns.ftn.pki.model.entity.Certificate;
@@ -28,6 +27,8 @@ public interface CertificateService {
     void revokeCertificateAsUser(Long certificateId, RevokeCertificateRequest request);
     CrlResponse getCrl(String issuerSerialNumber);
     OcspStatusResponse getOcspStatus(String serialNumber);
+    byte[] downloadStandardCrl(String issuerSerialNumber);
+    
     CertificateResponse issueCertificateFromCsr(ParsedCsrData csrData, Certificate issuerCertificate, LocalDateTime validFrom, LocalDateTime validTo);
     CertificateResponse autoGenerateCertificate(CreateAutoCertificateRequest request);
 }
